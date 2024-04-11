@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <TextView
+        android:id="@+id/list_title"
+        app:layout_constraintTop_toTopOf="parent"
+        android:background="@color/blue"
+        android:paddingTop="15dp"
+        android:paddingBottom="15dp"
+        android:textSize="30sp"
+        android:textColor="#fff"
+        android:text="Song List"
+        android:gravity="center"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+    <ImageView
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_width="match_parent"
+        android:scaleType="centerCrop"
+        android:layout_height="400dp"
+        android:src="@drawable/singer"/>
+    <ImageView
+        android:id="@+id/image"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_width="match_parent"
+        android:scaleType="centerCrop"
+        android:layout_height="400dp"
+        android:src="@drawable/blackimage"
+        android:alpha="0.7" />
+    <TextView
+        android:id="@+id/singer"
+        app:layout_constraintBaseline_toTopOf="@+id/des"
+        android:layout_marginBottom="30dp"
+        android:text="Sơn Tùng M-TP"
+        android:textColor="#fff"
+        android:textSize="40sp"
+        android:textStyle="bold"
+        android:alpha="0.85"
+        android:layout_marginLeft="17dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+    <TextView
+        android:id="@+id/des"
+        app:layout_constraintBottom_toBottomOf="@+id/image"
+        android:layout_marginBottom="20dp"
+        android:text="Ca sĩ nhạc Pop"
+        android:textColor="#fff"
+        android:textSize="20sp"
+        android:alpha="0.85"
+        android:layout_marginLeft="17dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+</androidx.constraintlayout.widget.ConstraintLayout>

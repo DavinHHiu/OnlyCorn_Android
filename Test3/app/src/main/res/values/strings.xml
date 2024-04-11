@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Test3</string>
+    <string-array name="category">
+        <item>Pop</item>
+        <item>Rock</item>
+        <item>Hiphop/Rap</item>
+        <item>Country</item>
+        <item>Blues</item>
+        <item>Classical</item>
+        <item>Reggae</item>
+        <item>R&amp;B</item>
+    </string-array>
+</resources>
