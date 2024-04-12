@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "488134872019",
+    "project_id": "onlycorn-82a27",
+    "storage_bucket": "onlycorn-82a27.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:488134872019:android:b0c7d7d31c65cad2083d26",
+        "android_client_info": {
+          "package_name": "com.example.onlycorn"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAXObU_dExFsmMsYfTYqzdJV_0HDklbnEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
