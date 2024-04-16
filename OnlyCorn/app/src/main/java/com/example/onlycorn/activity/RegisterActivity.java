@@ -1,7 +1,6 @@
-package com.example.onlycorn;
+package com.example.onlycorn.activity;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.ProgressDialog;
@@ -14,21 +13,24 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.onlycorn.R;
+import com.example.onlycorn.model.User;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 public class RegisterActivity extends AppCompatActivity {
 
-    EditText emailEt, passwordEt;
-
-    TextView haveAccount;
-    Button registerBtn;
-    ProgressDialog progressDialog;
+    private EditText emailEt, passwordEt;
+    private TextView haveAccount;
+    private Button registerBtn;
+    private ProgressDialog progressDialog;
     private FirebaseAuth mAuth;
+    private FirebaseFirestore database;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,6 +48,7 @@ public class RegisterActivity extends AppCompatActivity {
 
         //initialize the FirebaseAuth instance
         mAuth = FirebaseAuth.getInstance();
+        database = FirebaseFirestore.getInstance();
 
         //handle register
         registerBtn.setOnClickListener(new View.OnClickListener() {
@@ -85,6 +88,11 @@ public class RegisterActivity extends AppCompatActivity {
                         if (task.isSuccessful()) {
                             progressDialog.dismiss();
                             FirebaseUser user = mAuth.getCurrentUser();
+                            if (user != null) {
+                                User userDB = new User(user.getUid(), user.getEmail(), "online");
+                                database.collection("users").document(user.getUid())
+                                        .set(userDB);
+                            }
                             Toast.makeText(RegisterActivity.this, "Registerd...\n"+user.getEmail(), Toast.LENGTH_SHORT).show();
                             startActivity(new Intent(RegisterActivity.this, MainActivity.class));
                             finish();

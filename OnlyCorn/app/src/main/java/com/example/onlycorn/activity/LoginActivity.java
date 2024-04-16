@@ -1,4 +1,4 @@
-package com.example.onlycorn;
+package com.example.onlycorn.activity;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -10,7 +10,6 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.InputType;
-import android.util.Log;
 import android.util.Patterns;
 import android.view.View;
 import android.widget.Button;
@@ -19,8 +18,8 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.gms.auth.api.identity.BeginSignInRequest;
-import com.google.android.gms.auth.api.identity.SignInCredential;
+import com.example.onlycorn.R;
+import com.example.onlycorn.model.User;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -35,6 +34,7 @@ import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.GoogleAuthProvider;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -43,18 +43,20 @@ public class LoginActivity extends AppCompatActivity {
     private static final int REQ_ONE_TAP = 2;
     private boolean showOneTapUI = true;
 
-    GoogleSignInClient mGoogleSignInClient;
-    EditText emailEt, passwordEt;
+    private GoogleSignInClient mGoogleSignInClient;
+    private EditText emailEt, passwordEt;
 
-    Button loginBtn;
+    private Button loginBtn;
 
-    SignInButton googleLoginButton;
+    private SignInButton googleLoginButton;
 
-    TextView haveNoAccountTv, recoverPassword;
+    private TextView haveNoAccountTv, recoverPassword;
 
-    FirebaseAuth mAuth;
+    private FirebaseAuth mAuth;
 
-    ProgressDialog progressDialog;
+    private FirebaseFirestore database;
+
+    private ProgressDialog progressDialog;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -212,9 +214,12 @@ public class LoginActivity extends AppCompatActivity {
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         if (task.isSuccessful()) {
                             FirebaseUser user = mAuth.getCurrentUser();
-
-                            Toast.makeText(LoginActivity.this, user.getEmail(), Toast.LENGTH_SHORT).show();
-
+                            if (user != null) {
+                                User userDB = new User(user.getUid(), user.getEmail(), "online");
+                                database.collection("users").document(user.getUid())
+                                        .set(userDB);
+                                Toast.makeText(LoginActivity.this, user.getEmail(), Toast.LENGTH_SHORT).show();
+                            }
                             startActivity(new Intent(LoginActivity.this, MainActivity.class));
                             finish();
                         } else {
@@ -243,6 +248,7 @@ public class LoginActivity extends AppCompatActivity {
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
         mAuth = FirebaseAuth.getInstance();
+        database = FirebaseFirestore.getInstance();
         progressDialog = new ProgressDialog(this);
         googleLoginButton = findViewById(R.id.google_login_btn);
     }

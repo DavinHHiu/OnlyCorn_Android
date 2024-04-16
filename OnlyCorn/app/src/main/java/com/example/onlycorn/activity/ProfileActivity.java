@@ -1,9 +1,11 @@
-package com.example.onlycorn;
+package com.example.onlycorn.activity;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
+
+import com.example.onlycorn.R;
 
 public class ProfileActivity extends AppCompatActivity {
 

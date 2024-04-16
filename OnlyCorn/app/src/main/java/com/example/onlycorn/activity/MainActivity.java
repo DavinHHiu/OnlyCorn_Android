@@ -1,4 +1,4 @@
-package com.example.onlycorn;
+package com.example.onlycorn.activity;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import com.example.onlycorn.R;
 import com.example.onlycorn.fragment.HomeFragment;
 import com.example.onlycorn.fragment.PostFragment;
 import com.example.onlycorn.fragment.ProfileFragment;
