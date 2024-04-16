@@ -50,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
                     selectedFragment = new PostFragment();
                 } else if (id == R.id.navProfile) {
                     item.setIcon(R.drawable.icon_profile);
-                    selectedFragment = new ProfileFragment();
+                    selectedFragment = new ProfileFragment(getApplicationContext());
                 }
                 loadFragment(selectedFragment);
                 return true;

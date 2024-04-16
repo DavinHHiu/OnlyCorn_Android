@@ -40,10 +40,8 @@ public class LoginActivity extends AppCompatActivity {
 
     private static final int RC_SIGN_IN = 100;
 
-    private static final int REQ_ONE_TAP = 2;
-    private boolean showOneTapUI = true;
-
     private GoogleSignInClient mGoogleSignInClient;
+
     private EditText emailEt, passwordEt;
 
     private Button loginBtn;
@@ -214,12 +212,12 @@ public class LoginActivity extends AppCompatActivity {
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         if (task.isSuccessful()) {
                             FirebaseUser user = mAuth.getCurrentUser();
-                            if (user != null) {
+                            if (user != null && task.getResult().getAdditionalUserInfo().isNewUser()) {
                                 User userDB = new User(user.getUid(), user.getEmail(), "online");
                                 database.collection("users").document(user.getUid())
                                         .set(userDB);
-                                Toast.makeText(LoginActivity.this, user.getEmail(), Toast.LENGTH_SHORT).show();
                             }
+                            Toast.makeText(LoginActivity.this, user.getEmail(), Toast.LENGTH_SHORT).show();
                             startActivity(new Intent(LoginActivity.this, MainActivity.class));
                             finish();
                         } else {

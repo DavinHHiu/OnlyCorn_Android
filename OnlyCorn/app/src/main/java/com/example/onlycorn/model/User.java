@@ -2,8 +2,10 @@ package com.example.onlycorn.model;
 
 public class User {
     private String userId;
+    private String name;
     private String email;
     private String username;
+    private String image;
     private String status;
 
     public User() {
@@ -57,5 +59,21 @@ public class User {
 
     private void setFirstUsername() {
         this.username = this.email.split("@")[0];
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
     }
 }
