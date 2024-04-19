@@ -23,6 +23,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.onlycorn.R;
 import com.example.onlycorn.activities.AddPostActivity;
 import com.example.onlycorn.activities.OtherProfileActivity;
+import com.example.onlycorn.activities.PostDetailActivity;
 import com.example.onlycorn.models.Post;
 import com.example.onlycorn.utils.FirebaseUtils;
 import com.example.onlycorn.utils.Pop;
@@ -156,7 +157,9 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         postViewHolder.commentButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Pop.pop(context, "Comment");
+                Intent intent = new Intent(context, PostDetailActivity.class);
+                intent.putExtra("postId", pId);
+                context.startActivity(intent);
             }
         });
 
@@ -227,6 +230,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             popupMenu.getMenu().add(Menu.NONE, 0, 0, "Delete");
             popupMenu.getMenu().add(Menu.NONE, 1, 0, "Edit");
         }
+        popupMenu.getMenu().add(Menu.NONE, 2, 0, "View detail");
         popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
             @Override
             public boolean onMenuItemClick(MenuItem item) {
@@ -236,6 +240,10 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 } else if (id == 1) {
                     Intent intent = new Intent(context, AddPostActivity.class);
                     intent.putExtra("key", "editPost");
+                    intent.putExtra("postId", pId);
+                    context.startActivity(intent);
+                } else if (id == 2) {
+                    Intent intent = new Intent(context, PostDetailActivity.class);
                     intent.putExtra("postId", pId);
                     context.startActivity(intent);
                 }
