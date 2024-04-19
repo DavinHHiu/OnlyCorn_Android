@@ -14,10 +14,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.onlycorn.R;
 import com.example.onlycorn.adapters.PostAdapter;
 import com.example.onlycorn.models.Post;
-import com.google.firebase.auth.FirebaseAuth;
+import com.example.onlycorn.utils.FirebaseUtils;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.EventListener;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
@@ -26,29 +25,22 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class HomeFragment extends Fragment {
-
-    private FirebaseAuth firebaseAuth;
-
     private RecyclerView recyclerView;
 
     private List<Post> postList;
-
     private PostAdapter postAdapter;
-
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.home_fragment, container, false);
 
-        firebaseAuth = FirebaseAuth.getInstance();
-
         recyclerView = view.findViewById(R.id.postRecycleView);
         LinearLayoutManager linearLayoutManager = new LinearLayoutManager(getActivity());
         linearLayoutManager.setStackFromEnd(true);
         linearLayoutManager.setReverseLayout(true);
         recyclerView.setLayoutManager(linearLayoutManager);
-        
+
         postList = new ArrayList<>();
         loadPosts();
 
@@ -56,8 +48,8 @@ public class HomeFragment extends Fragment {
     }
 
     private void loadPosts() {
-        CollectionReference collectionRef = FirebaseFirestore.getInstance().collection(Post.COLLECTION);
-        collectionRef.addSnapshotListener(new EventListener<QuerySnapshot>() {
+        CollectionReference postRef = FirebaseUtils.getCollectionRef(Post.COLLECTION);
+        postRef.addSnapshotListener(new EventListener<QuerySnapshot>() {
             @Override
             public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
                 postList.clear();

@@ -26,7 +26,6 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
-import android.widget.Toast;
 
 import com.example.onlycorn.R;
 import com.example.onlycorn.models.Post;
@@ -36,13 +35,11 @@ import com.example.onlycorn.utils.Pop;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
-import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -55,32 +52,22 @@ import com.squareup.picasso.Picasso;
 import java.io.ByteArrayOutputStream;
 
 public class AddPostActivity extends AppCompatActivity {
+    private static final int CAMERA_REQUEST_CODE = 100;
+    private static final int STORAGE_REQUEST_CODE = 200;
+    private static final int IMAGE_PICK_REQUEST_CODE = 300;
+
     private EditText captionEt, descriptionEt;
-
     private ImageView postImage;
-
     private Button uploadButton;
 
     private Uri imageUri;
-
     private ProgressDialog pd;
-
     private boolean editPost;
-
     private String postId;
-
     private Post post;
-
     private User user;
 
-    private static final int CAMERA_REQUEST_CODE = 100;
-
-    private static final int STORAGE_REQUEST_CODE = 200;
-
-    private static final int IMAGE_PICK_REQUEST_CODE = 300;
-
     String[] cameraPermissions;
-
     String[] storagePermissions;
 
     @SuppressLint("SetTextI18n")
@@ -92,12 +79,13 @@ public class AddPostActivity extends AppCompatActivity {
         initViews();
 
         FirebaseUser userFb = FirebaseUtils.getUserAuth();
-        FirebaseUtils.getDocumentRef(User.COLLECTION, userFb.getUid()).get().addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
-            @Override
-            public void onSuccess(DocumentSnapshot documentSnapshot) {
-                user = documentSnapshot.toObject(User.class);
-            }
-        });
+        FirebaseUtils.getDocumentRef(User.COLLECTION, userFb.getUid()).get()
+                .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
+                    @Override
+                    public void onSuccess(DocumentSnapshot documentSnapshot) {
+                        user = documentSnapshot.toObject(User.class);
+                    }
+                });
 
         editPost = getIntent().getStringExtra("key") != null && getIntent().getStringExtra("key").equals("editPost");
         if (editPost) {
@@ -135,7 +123,7 @@ public class AddPostActivity extends AppCompatActivity {
                 String description = descriptionEt.getText().toString().trim();
 
                 if (TextUtils.isEmpty(caption)) {
-                    Toast.makeText(AddPostActivity.this, "Enter caption...", Toast.LENGTH_SHORT).show();
+                    Pop.pop(AddPostActivity.this, "Enter caption...");
                     return;
                 }
 
@@ -355,7 +343,7 @@ public class AddPostActivity extends AppCompatActivity {
                                               @Override
                                               public void onSuccess(Void unused) {
                                                   pd.dismiss();
-                                                  Toast.makeText(AddPostActivity.this, "Posted", Toast.LENGTH_SHORT).show();
+                                                  Pop.pop(AddPostActivity.this, "Posted");
                                                   startActivity(new Intent(AddPostActivity.this, MainActivity.class));
                                                   finish();
                                               }
@@ -364,7 +352,7 @@ public class AddPostActivity extends AppCompatActivity {
                                               @Override
                                               public void onFailure(@NonNull Exception e) {
                                                   pd.dismiss();
-                                                  Toast.makeText(AddPostActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                                                  Pop.pop(AddPostActivity.this, e.getMessage());
                                               }
                                           });
                               }
@@ -374,7 +362,7 @@ public class AddPostActivity extends AppCompatActivity {
                         @Override
                         public void onFailure(@NonNull Exception e) {
                             pd.dismiss();
-                            Toast.makeText(AddPostActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                            Pop.pop(AddPostActivity.this, e.getMessage());
                         }
                     });
         }

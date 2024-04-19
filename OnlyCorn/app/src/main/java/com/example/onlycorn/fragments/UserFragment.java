@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.onlycorn.R;
 import com.example.onlycorn.adapters.UsersAdapter;
 import com.example.onlycorn.models.User;
+import com.example.onlycorn.utils.FirebaseUtils;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
@@ -30,13 +31,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class UserFragment extends Fragment {
-
+    private SearchView searchView;
     private RecyclerView recyclerView;
 
-    private SearchView searchView;
-
     private UsersAdapter usersAdapter;
-
     private List<User> userList;
 
     public UserFragment() {
@@ -49,6 +47,52 @@ public class UserFragment extends Fragment {
         View view = inflater.inflate(R.layout.user_fragment, container, false);
         initViews(view);
         return view;
+    }
+
+    private void searchUsers(String query) {
+        FirebaseUser fUser = FirebaseUtils.getUserAuth();
+        CollectionReference collectionRef = FirebaseUtils.getCollectionRef(User.COLLECTION);
+
+        collectionRef.addSnapshotListener(new EventListener<QuerySnapshot>() {
+            @Override
+            public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
+                userList.clear();
+                for(QueryDocumentSnapshot qds : queryDocumentSnapshots) {
+                    User user = qds.toObject(User.class);
+
+                    if (!user.getUserId().equals(fUser.getUid())
+                            && (user.getUsername().toLowerCase().contains(query.trim().toLowerCase()) ||
+                                user.getName().toLowerCase().contains(query.trim().toLowerCase()))) {
+                        userList.add(user);
+                    }
+
+                    usersAdapter = new UsersAdapter(getActivity(), userList);
+                    recyclerView.setAdapter(usersAdapter);
+                }
+            }
+        });
+    }
+
+    private void getAllUsers() {
+        FirebaseUser fUser = FirebaseUtils.getUserAuth();
+        CollectionReference collectionRef = FirebaseUtils.getCollectionRef(User.COLLECTION);
+
+        collectionRef.addSnapshotListener(new EventListener<QuerySnapshot>() {
+            @Override
+            public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
+                userList.clear();
+                for(QueryDocumentSnapshot qs : queryDocumentSnapshots) {
+                    User user = qs.toObject(User.class);
+
+                    if (!user.getUserId().equals(fUser.getUid())) {
+                        userList.add(user);
+                    }
+
+                    usersAdapter = new UsersAdapter(getActivity(), userList);
+                    recyclerView.setAdapter(usersAdapter);
+                }
+            }
+        });
     }
 
     private void initViews(View view) {
@@ -82,51 +126,5 @@ public class UserFragment extends Fragment {
         userList = new ArrayList<>();
 
         getAllUsers();
-    }
-
-    private void searchUsers(String query) {
-        FirebaseUser fUser = FirebaseAuth.getInstance().getCurrentUser();
-        CollectionReference collectionRef = FirebaseFirestore.getInstance().collection(User.COLLECTION);
-
-        collectionRef.addSnapshotListener(new EventListener<QuerySnapshot>() {
-            @Override
-            public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
-                userList.clear();
-                for(QueryDocumentSnapshot qds : queryDocumentSnapshots) {
-                    User user = qds.toObject(User.class);
-
-                    if (!user.getUserId().equals(fUser.getUid())
-                            && (user.getUsername().toLowerCase().contains(query.trim().toLowerCase()) ||
-                                user.getName().toLowerCase().contains(query.trim().toLowerCase()))) {
-                        userList.add(user);
-                    }
-
-                    usersAdapter = new UsersAdapter(getActivity(), userList);
-                    recyclerView.setAdapter(usersAdapter);
-                }
-            }
-        });
-    }
-
-    private void getAllUsers() {
-        FirebaseUser fUser = FirebaseAuth.getInstance().getCurrentUser();
-        CollectionReference collectionRef = FirebaseFirestore.getInstance().collection(User.COLLECTION);
-
-        collectionRef.addSnapshotListener(new EventListener<QuerySnapshot>() {
-            @Override
-            public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
-                userList.clear();
-                for(QueryDocumentSnapshot qs : queryDocumentSnapshots) {
-                    User user = qs.toObject(User.class);
-
-                    if (!user.getUserId().equals(fUser.getUid())) {
-                        userList.add(user);
-                    }
-
-                    usersAdapter = new UsersAdapter(getActivity(), userList);
-                    recyclerView.setAdapter(usersAdapter);
-                }
-            }
-        });
     }
 }

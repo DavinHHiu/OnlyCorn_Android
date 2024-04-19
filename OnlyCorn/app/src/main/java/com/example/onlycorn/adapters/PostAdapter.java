@@ -69,7 +69,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
     @Override
     public PostViewHolder onCreateViewHolder(@NonNull ViewGroup viewGroup, int i) {
         View view = LayoutInflater.from(context).inflate(R.layout.posts_item, viewGroup, false);
-
         return new PostViewHolder(view);
     }
 
@@ -148,7 +147,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                         .addOnFailureListener(new OnFailureListener() {
                             @Override
                             public void onFailure(@NonNull Exception e) {
-
                             }
                         });
             }

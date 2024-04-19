@@ -15,12 +15,12 @@ public class StartActivity extends AppCompatActivity {
     private Button registerBtn, loginBtn;
 
     private FirebaseAuth mAuth;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_start);
         mAuth = FirebaseAuth.getInstance();
-//        checkUserStatus();
 
         registerBtn = findViewById(R.id.register_btn);
         loginBtn = findViewById(R.id.login_btn);

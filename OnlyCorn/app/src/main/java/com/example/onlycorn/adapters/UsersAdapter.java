@@ -7,7 +7,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -15,13 +14,13 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.onlycorn.R;
 import com.example.onlycorn.activities.OtherProfileActivity;
 import com.example.onlycorn.models.User;
+import com.example.onlycorn.utils.Pop;
 import com.squareup.picasso.Picasso;
 
 import java.util.List;
 
 public class UsersAdapter extends RecyclerView.Adapter<UsersAdapter.UsersViewHolder> {
     private Context context;
-
     private List<User> userList;
 
     public UsersAdapter(Context context, List<User> userList) {
@@ -51,7 +50,7 @@ public class UsersAdapter extends RecyclerView.Adapter<UsersAdapter.UsersViewHol
         holder.itemView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(context.getApplicationContext(), user.getUsername(), Toast.LENGTH_SHORT).show();
+                Pop.pop(context.getApplicationContext(), user.getUsername());
                 Intent intent = new Intent(context, OtherProfileActivity.class);
                 intent.putExtra("uid", user.getUserId());
                 context.startActivity(intent);

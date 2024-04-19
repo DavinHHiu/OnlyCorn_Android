@@ -12,6 +12,7 @@ import android.widget.TextView;
 import com.example.onlycorn.R;
 import com.example.onlycorn.adapters.PostAdapter;
 import com.example.onlycorn.models.Post;
+import com.example.onlycorn.models.User;
 import com.example.onlycorn.utils.FirebaseUtils;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -29,48 +30,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class OtherProfileActivity extends AppCompatActivity {
-    private FirebaseAuth firebaseAuth;
-    private FirebaseFirestore database;
-    private FirebaseUser authUser;
-    private String uid;
-    private List<Post> postList;
-    private PostAdapter adapter;
-    private RecyclerView recyclerViewPosts;
     private ImageView avatarIv;
     private TextView usernameTv;
     private TextView following;
     private TextView followers;
+    private RecyclerView recyclerViewPosts;
+
+    private FirebaseUser authUser;
+
+    private String uid;
+    private List<Post> postList;
+    private PostAdapter adapter;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_other_profile);
 
-        firebaseAuth = FirebaseAuth.getInstance();
-        database = FirebaseFirestore.getInstance();
-        authUser = firebaseAuth.getCurrentUser();
-        postList = new ArrayList<>();
-
-        avatarIv = findViewById(R.id.avatarIv);
-        usernameTv = findViewById(R.id.usernameTv);
-        following = findViewById(R.id.following);
-        followers = findViewById(R.id.followers);
-        recyclerViewPosts = findViewById(R.id.recycleViewPosts);
-
-        recyclerViewPosts = findViewById(R.id.recycleViewPosts);
-        uid = getIntent().getStringExtra("uid");
-
-        DocumentReference docRef = database.collection("users").document(authUser.getUid());
-        docRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
-            @Override
-            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
-                if (documentSnapshot != null) {
-                    String username = documentSnapshot.getString("username");
-
-                    usernameTv.setText(username);
-                }
-            }
-        });
-
+        initViews();
+        initData();
         loadOtherPosts();
     }
 
@@ -97,5 +75,29 @@ public class OtherProfileActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    private void initData() {
+        authUser = FirebaseUtils.getUserAuth();
+        postList = new ArrayList<>();
+        uid = getIntent().getStringExtra("uid");
+        DocumentReference docRef = FirebaseUtils.getDocumentRef(User.COLLECTION, authUser.getUid());
+        docRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
+            @Override
+            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
+                if (documentSnapshot != null) {
+                    String username = documentSnapshot.getString("username");
+                    usernameTv.setText(username);
+                }
+            }
+        });
+    }
+
+    private void initViews() {
+        avatarIv = findViewById(R.id.avatarIv);
+        usernameTv = findViewById(R.id.usernameTv);
+        following = findViewById(R.id.following);
+        followers = findViewById(R.id.followers);
+        recyclerViewPosts = findViewById(R.id.recycleViewPosts);
     }
 }

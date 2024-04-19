@@ -16,7 +16,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.example.onlycorn.R;
 import com.example.onlycorn.models.User;
@@ -112,8 +111,7 @@ public class LoginActivity extends AppCompatActivity {
                             finish();
                         } else {
                             progressDialog.dismiss();
-                            Toast.makeText(LoginActivity.this, "Authentication failed.", Toast.LENGTH_SHORT)
-                                    .show();
+                            Pop.pop(LoginActivity.this, "Authentication failed.");
                         }
                     }
                 })
@@ -121,8 +119,7 @@ public class LoginActivity extends AppCompatActivity {
                     @Override
                     public void onFailure(@NonNull Exception e) {
                         progressDialog.dismiss();
-                        Toast.makeText(LoginActivity.this, e.getMessage(), Toast.LENGTH_SHORT)
-                                .show();
+                        Pop.pop(LoginActivity.this, e.getMessage());
                     }
                 });
     }
@@ -169,9 +166,9 @@ public class LoginActivity extends AppCompatActivity {
                     public void onComplete(@NonNull Task<Void> task) {
                         progressDialog.dismiss();
                         if (task.isSuccessful()) {
-                            Toast.makeText(LoginActivity.this, "Email sent", Toast.LENGTH_LONG).show();
+                            Pop.pop(LoginActivity.this, "Email sent");
                         } else {
-                            Toast.makeText(LoginActivity.this, "Email sent failed", Toast.LENGTH_SHORT).show();
+                            Pop.pop(LoginActivity.this, "Email sent failed");
                         }
                     }
                 })
@@ -179,7 +176,7 @@ public class LoginActivity extends AppCompatActivity {
                     @Override
                     public void onFailure(@NonNull Exception e) {
                         progressDialog.dismiss();
-                        Toast.makeText(LoginActivity.this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                        Pop.pop(LoginActivity.this, e.getMessage());
                     }
                 });
     }
@@ -194,7 +191,7 @@ public class LoginActivity extends AppCompatActivity {
                 GoogleSignInAccount account = task.getResult(ApiException.class);
                 firebaseAuthWithGoogle(account);
             } catch (ApiException e) {
-                Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show();
+                Pop.pop(this, e.getMessage());
             }
         }
     }

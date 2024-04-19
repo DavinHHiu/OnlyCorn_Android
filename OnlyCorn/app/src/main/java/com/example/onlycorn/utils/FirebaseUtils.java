@@ -1,7 +1,5 @@
 package com.example.onlycorn.utils;
 
-import android.annotation.SuppressLint;
-
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
@@ -11,7 +9,6 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 
 public class FirebaseUtils {
-
     public static CollectionReference getCollectionRef(String collection) {
         return FirebaseFirestore.getInstance().collection(collection);
     }

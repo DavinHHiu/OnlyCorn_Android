@@ -41,15 +41,17 @@ import java.util.Collection;
 import java.util.List;
 
 public class ProfileFragment extends Fragment {
-    private FirebaseUser authUser;
-    private User user;
-    private Context context;
     private ImageView avatarIv;
     private TextView usernameTv;
-    private TextView following;
     private TextView followers;
+    private TextView following;
     private Button editButton;
     private RecyclerView recyclerViewPosts;
+
+    private FirebaseUser authUser;
+
+    private User user;
+    private Context context;
     private List<Post> postList;
     private PostAdapter adapter;
 
@@ -61,19 +63,13 @@ public class ProfileFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.profile_fragment, container, false);
+        initViews(view);
 
         authUser = FirebaseUtils.getUserAuth();
         postList = new ArrayList<>();
 
-        avatarIv = view.findViewById(R.id.avatarIv);
-        usernameTv = view.findViewById(R.id.usernameTv);
-        following = view.findViewById(R.id.following);
-        followers = view.findViewById(R.id.followers);
-        editButton = view.findViewById(R.id.editButton);
-        recyclerViewPosts = view.findViewById(R.id.recycleViewPosts);
-
-        DocumentReference docRef = FirebaseUtils.getDocumentRef(User.COLLECTION, authUser.getUid());
-        docRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
+        DocumentReference userRef = FirebaseUtils.getDocumentRef(User.COLLECTION, authUser.getUid());
+        userRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
             @Override
             public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
                 if (documentSnapshot != null) {
@@ -135,5 +131,14 @@ public class ProfileFragment extends Fragment {
                 getActivity().finish();
             }
         }
+    }
+
+    private void initViews(View view) {
+        avatarIv = view.findViewById(R.id.avatarIv);
+        usernameTv = view.findViewById(R.id.usernameTv);
+        following = view.findViewById(R.id.following);
+        followers = view.findViewById(R.id.followers);
+        editButton = view.findViewById(R.id.editButton);
+        recyclerViewPosts = view.findViewById(R.id.recycleViewPosts);
     }
 }
