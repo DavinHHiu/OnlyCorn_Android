@@ -1,4 +1,4 @@
-package com.example.onlycorn.fragment;
+package com.example.onlycorn.fragments;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;

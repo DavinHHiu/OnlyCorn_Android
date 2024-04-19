@@ -2,6 +2,8 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".activities.OtherProfileActivity"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <LinearLayout
@@ -132,25 +134,9 @@
                     </LinearLayout>
                 </LinearLayout>
             </RelativeLayout>
-            <LinearLayout
-                android:id="@+id/profileInfo"
-                android:layout_below="@+id/info"
-                android:layout_marginTop="-40dp"
-                android:paddingLeft="10dp"
-                android:paddingRight="10dp"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-                <Button
-                    android:id="@+id/editButton"
-                    android:text="Chỉnh sửa"
-                    android:textStyle="bold"
-                    android:textAllCaps="false"
-                    android:layout_width="match_parent"
-                    android:layout_height="40dp" />
-            </LinearLayout>
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recycleViewPosts"
-                android:layout_below="@+id/profileInfo"
+                android:layout_below="@+id/info"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
         </RelativeLayout>

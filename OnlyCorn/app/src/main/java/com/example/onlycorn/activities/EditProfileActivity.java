@@ -1,4 +1,4 @@
-package com.example.onlycorn.activity;
+package com.example.onlycorn.activities;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -19,46 +19,34 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import com.example.onlycorn.R;
-import com.example.onlycorn.model.User;
+import com.example.onlycorn.models.User;
+import com.example.onlycorn.utils.FirebaseUtils;
+import com.example.onlycorn.utils.Pop;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 
-import java.util.HashMap;
-
 public class EditProfileActivity extends AppCompatActivity {
-
-    private EditText name, userName, email;
-
-    private TextView editAvatar;
-
-    private Button updateButton;
-
-    private FirebaseUser user;
-
-    private FirebaseAuth mAuth;
-
-    private FirebaseFirestore database;
-
-    //permissions constants
     private static final int CAMERA_REQUEST_CODE = 100;
     private static final int STORAGE_REQUEST_CODE = 200;
     private static final int IMAGE_PICK_GALLERY_CODE = 300;
     private static final int IMAGE_PICK_CAMERA_CODE = 400;
 
-    private StorageReference storageReference;
+    private EditText nameEt, userNameEt, emailEt;
+    private TextView editAvatar;
+    private Button updateButton;
 
-    String storagePath = "Users_Avatar/";
+    private FirebaseUser user;
+    private FirebaseAuth mAuth;
 
+    private String storagePath = "Users_Avatar/";
     private String[] cameraPermissions;
     private String[] storagePermissions;
 
@@ -82,6 +70,37 @@ public class EditProfileActivity extends AppCompatActivity {
                 showImagePicDialog();
             }
         });
+
+        updateButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                updateProfileUser();
+            }
+        });
+    }
+
+    private void updateProfileUser() {
+        String name = nameEt.getText().toString().trim();
+        String username = userNameEt.getText().toString().trim();
+        String email = emailEt.getText().toString().trim();
+
+        if (name.isEmpty() || username.isEmpty() || email.isEmpty()) {
+            Pop.pop(this, "Vui lòng điền đầy đủ thông tin");
+        } else {
+            User userDB = new User(user.getUid(), name, username, email);
+            FirebaseUtils.getDocumentRef(User.COLLECTION, user.getUid())
+                    .set(userDB)
+                    .addOnCompleteListener(new OnCompleteListener<Void>() {
+                        @Override
+                        public void onComplete(@NonNull Task<Void> task) {
+                            if (task.isSuccessful()) {
+                                Pop.pop(getApplicationContext(), "Cập nhật thành công");
+                                startActivity(new Intent(getApplicationContext(), MainActivity.class));
+                                finish();
+                            }
+                        }
+                    });
+        }
     }
 
     private boolean checkStoragePermission() {
@@ -115,7 +134,7 @@ public class EditProfileActivity extends AppCompatActivity {
                     if (cameraAccepted && writeStorageAccepted) {
                         pickFromCamera();
                     } else {
-                        Toast.makeText(this, "Please enable camera & storage permission", Toast.LENGTH_SHORT).show();
+                        Pop.pop(this, "Please enable camera & storage permission");
                     }
                 }
                 break;
@@ -125,7 +144,7 @@ public class EditProfileActivity extends AppCompatActivity {
                     if (writeStorageAccepted) {
                         pickFromGallery();
                     } else {
-                        Toast.makeText(this, "Please enable storage permission", Toast.LENGTH_SHORT).show();
+                        Pop.pop(this, "Please enable storage permission");
                     }
                 }
                 break;
@@ -152,7 +171,7 @@ public class EditProfileActivity extends AppCompatActivity {
     private void uploadProfileAvatar(Uri imageUri) {
         String filePathAndName = storagePath + user.getUid();
 
-        StorageReference storageRef2 = storageReference.child(filePathAndName);
+        StorageReference storageRef2 = FirebaseUtils.getStorageRef(filePathAndName);
         storageRef2.putFile(imageUri)
                 .addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
                     @Override
@@ -162,27 +181,27 @@ public class EditProfileActivity extends AppCompatActivity {
                         if (uriTask.isSuccessful()) {
                             Uri downloadUri = uriTask.getResult();
 
-                            database.collection("users").document(user.getUid())
+                            FirebaseUtils.getDocumentRef(User.COLLECTION, user.getUid())
                                     .get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                                         @Override
                                         public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                                             User userDB = task.getResult().toObject(User.class);
                                             userDB.setImage(downloadUri.toString());
-                                            database.collection("users").document(user.getUid())
+                                            FirebaseUtils.getDocumentRef(User.COLLECTION, user.getUid())
                                                     .set(userDB);
                                         }
                                     });
 
 
                         } else {
-                            Toast.makeText(getApplicationContext(), "Some error occured", Toast.LENGTH_SHORT).show();
+                            Pop.pop(getApplicationContext(), "Some error occured");
                         }
                     }
                 })
                 .addOnFailureListener(new OnFailureListener() {
                     @Override
                     public void onFailure(@NonNull Exception e) {
-                        Toast.makeText(getApplicationContext(), e.getMessage(), Toast.LENGTH_SHORT).show();
+                        Pop.pop(getApplicationContext(), e.getMessage());
                     }
                 });
     }
@@ -209,7 +228,6 @@ public class EditProfileActivity extends AppCompatActivity {
         String[] options = {"Máy ảnh", "Thư viện"};
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
-
         builder.setTitle("Chọn ảnh đại diện");
 
         builder.setItems(options, new DialogInterface.OnClickListener() {
@@ -235,9 +253,9 @@ public class EditProfileActivity extends AppCompatActivity {
     }
 
     private void initViews() {
-        name = findViewById(R.id.nameEt);
-        userName = findViewById(R.id.usernameEt);
-        email = findViewById(R.id.emailEt);
+        nameEt = findViewById(R.id.nameEt);
+        userNameEt = findViewById(R.id.usernameEt);
+        emailEt = findViewById(R.id.emailEt);
         editAvatar = findViewById(R.id.edit_avatar);
         updateButton = findViewById(R.id.updateButton);
     }

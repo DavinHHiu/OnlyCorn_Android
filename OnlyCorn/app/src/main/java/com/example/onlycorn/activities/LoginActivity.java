@@ -1,4 +1,4 @@
-package com.example.onlycorn.activity;
+package com.example.onlycorn.activities;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -19,7 +19,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.onlycorn.R;
-import com.example.onlycorn.model.User;
+import com.example.onlycorn.models.User;
+import com.example.onlycorn.utils.FirebaseUtils;
+import com.example.onlycorn.utils.Pop;
 import com.google.android.gms.auth.api.signin.GoogleSignIn;
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInClient;
@@ -37,22 +39,15 @@ import com.google.firebase.auth.GoogleAuthProvider;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 public class LoginActivity extends AppCompatActivity {
-
     private static final int RC_SIGN_IN = 100;
 
-    private GoogleSignInClient mGoogleSignInClient;
-
     private EditText emailEt, passwordEt;
-
     private Button loginBtn;
-
     private SignInButton googleLoginButton;
-
     private TextView haveNoAccountTv, recoverPassword;
 
+    private GoogleSignInClient mGoogleSignInClient;
     private FirebaseAuth mAuth;
-
-    private FirebaseFirestore database;
 
     private ProgressDialog progressDialog;
 
@@ -212,33 +207,35 @@ public class LoginActivity extends AppCompatActivity {
                     public void onComplete(@NonNull Task<AuthResult> task) {
                         if (task.isSuccessful()) {
                             FirebaseUser user = mAuth.getCurrentUser();
-                            if (user != null && task.getResult().getAdditionalUserInfo().isNewUser()) {
+                            if (user != null && task.getResult().getAdditionalUserInfo() != null
+                                    && task.getResult().getAdditionalUserInfo().isNewUser()) {
                                 User userDB = new User(user.getUid(), user.getEmail(), "online");
-                                database.collection("users").document(user.getUid())
-                                        .set(userDB);
+                                FirebaseUtils.getDocumentRef(User.COLLECTION, user.getUid()).set(userDB);
+                                Pop.pop(LoginActivity.this, user.getEmail());
                             }
-                            Toast.makeText(LoginActivity.this, user.getEmail(), Toast.LENGTH_SHORT).show();
                             startActivity(new Intent(LoginActivity.this, MainActivity.class));
                             finish();
                         } else {
-                            Toast.makeText(LoginActivity.this, "Login failed...", Toast.LENGTH_SHORT).show();
+                            Pop.pop(LoginActivity.this, "Login failed...");
                         }
                     }
                 })
                 .addOnFailureListener(this, new OnFailureListener() {
                     @Override
                     public void onFailure(@NonNull Exception e) {
-                        Toast.makeText(LoginActivity.this, e.getMessage(), Toast.LENGTH_SHORT);
+                        Pop.pop(LoginActivity.this, e.getMessage());
                     }
                 });
     }
 
     private void init() {
         emailEt = findViewById(R.id.emailEt);
-        passwordEt = findViewById(R.id.passwordEt);
         loginBtn = findViewById(R.id.login_btn);
+        passwordEt = findViewById(R.id.passwordEt);
         haveNoAccountTv = findViewById(R.id.have_no_accountTv);
         recoverPassword = findViewById(R.id.recover_password);
+        googleLoginButton = findViewById(R.id.google_login_btn);
+
         GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
                 .requestIdToken(getString(R.string.default_web_client_id))
                 .requestEmail()
@@ -246,8 +243,6 @@ public class LoginActivity extends AppCompatActivity {
         mGoogleSignInClient = GoogleSignIn.getClient(this, gso);
 
         mAuth = FirebaseAuth.getInstance();
-        database = FirebaseFirestore.getInstance();
         progressDialog = new ProgressDialog(this);
-        googleLoginButton = findViewById(R.id.google_login_btn);
     }
 }

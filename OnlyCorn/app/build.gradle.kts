@@ -33,6 +33,7 @@ android {
 dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+    implementation("androidx.cardview:cardview:1.0.0")
 
     implementation("com.google.android.material:material:1.11.0")
     implementation("com.google.gms:google-services:4.4.1")
@@ -41,6 +42,7 @@ dependencies {
     implementation("com.google.firebase:firebase-core:21.1.1")
     implementation("com.google.firebase:firebase-firestore:24.11.1")
     implementation("com.google.firebase:firebase-storage:20.3.0")
+    implementation("com.firebaseui:firebase-ui-firestore:8.0.2")
 
     implementation("com.squareup.picasso:picasso:2.8")
     //google sign in library

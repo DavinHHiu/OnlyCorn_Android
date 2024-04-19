@@ -13,6 +13,10 @@
         android:title=""
         android:icon="@drawable/icon_add_outline"/>
     <item
+        android:id="@+id/navUser"
+        android:title=""
+        android:icon="@drawable/icon_users_outline"/>
+    <item
         android:id="@+id/navProfile"
         android:title=""
         android:icon="@drawable/icon_profile_outline"/>

@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".activity.LoginActivity"
+    tools:context=".activities.LoginActivity"
     android:padding="20dp">
 
     <ImageView
@@ -75,9 +75,17 @@
         android:id="@+id/google_login_btn"
         android:layout_below="@+id/login_btn"
         android:layout_centerHorizontal="true"
+        android:background="@drawable/button_primary"
         android:layout_marginTop="10dp"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
+        app:colorScheme="dark"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <ImageView android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_gravity="center_vertical"
+            android:layout_marginLeft="12dp"
+           />
+    </com.google.android.gms.common.SignInButton>
 
     <TextView
         android:id="@+id/have_no_accountTv"

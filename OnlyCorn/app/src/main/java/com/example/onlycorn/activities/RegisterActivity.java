@@ -1,4 +1,4 @@
-package com.example.onlycorn.activity;
+package com.example.onlycorn.activities;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -14,7 +14,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.onlycorn.R;
-import com.example.onlycorn.model.User;
+import com.example.onlycorn.models.User;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.Task;

@@ -1,6 +1,7 @@
-package com.example.onlycorn.model;
+package com.example.onlycorn.models;
 
 public class User {
+    public static final String COLLECTION = "users";
     private String userId;
     private String name;
     private String email;
@@ -58,7 +59,10 @@ public class User {
     }
 
     private void setFirstUsername() {
-        this.username = this.email.split("@")[0];
+        String name = this.email.split("@")[0];
+        this.username = name;
+        this.name = name;
+
     }
 
     public String getName() {

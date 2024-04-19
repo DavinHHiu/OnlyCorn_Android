@@ -1,4 +1,4 @@
-package com.example.onlycorn.activity;
+package com.example.onlycorn.activities;
 
 import androidx.appcompat.app.AppCompatActivity;
 

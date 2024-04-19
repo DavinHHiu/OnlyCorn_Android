@@ -4,9 +4,10 @@
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
-    <TextView
+
+    <androidx.recyclerview.widget.RecyclerView
         app:layout_constraintTop_toTopOf="parent"
-        android:text="Home"
+        android:id="@+id/postRecycleView"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
