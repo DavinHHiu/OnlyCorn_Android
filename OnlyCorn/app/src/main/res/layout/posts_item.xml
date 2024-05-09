@@ -114,14 +114,28 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
         </LinearLayout>
-        <TextView
-            android:id="@+id/likes"
-            android:text="2,361 likes"
-            android:textStyle="bold"
-            android:layout_marginTop="10dp"
-            android:layout_marginLeft="5dp"
-            android:textColor="@color/black"
+        <LinearLayout
+            android:orientation="horizontal"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content">
+            <TextView
+                android:id="@+id/likes"
+                android:text="2,361 likes"
+                android:textStyle="bold"
+                android:layout_marginTop="10dp"
+                android:layout_marginLeft="5dp"
+                android:textColor="@color/black"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+            <TextView
+                android:id="@+id/comments"
+                android:text="2,361 comments"
+                android:textStyle="bold"
+                android:layout_marginTop="10dp"
+                android:layout_marginLeft="15dp"
+                android:textColor="@color/black"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView>

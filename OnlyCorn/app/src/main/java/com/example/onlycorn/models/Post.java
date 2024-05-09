@@ -3,8 +3,6 @@ package com.example.onlycorn.models;
 public class Post {
     public static final String COLLECTION = "posts";
 
-    public static final String LIKE_COLLECTION = "likes";
-
     private String postId;
 
     private String caption;
@@ -17,6 +15,8 @@ public class Post {
 
     private String likes;
 
+    private String comments;
+
     private String uid;
 
     private String username;
@@ -26,13 +26,15 @@ public class Post {
     public Post() {
     }
 
-    public Post(String postId, String caption, String description, String image, String timeStamp, String likes, String uid, String username, String userAva) {
+    public Post(String postId, String caption, String description, String image, String timeStamp,
+                String likes, String comments, String uid, String username, String userAva) {
         this.postId = postId;
         this.caption = caption;
         this.description = description;
         this.image = image;
         this.timeStamp = timeStamp;
         this.likes = likes;
+        this.comments = comments;
         this.uid = uid;
         this.username = username;
         this.userAva = userAva;
@@ -84,6 +86,14 @@ public class Post {
 
     public void setLikes(String likes) {
         this.likes = likes;
+    }
+
+    public String getComments() {
+        return comments;
+    }
+
+    public void setComments(String comments) {
+        this.comments = comments;
     }
 
     public String getUid() {

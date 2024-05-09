@@ -4,6 +4,9 @@ import android.annotation.SuppressLint;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
+import android.net.Uri;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -18,18 +21,23 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.onlycorn.R;
 import com.example.onlycorn.activities.AddPostActivity;
 import com.example.onlycorn.activities.OtherProfileActivity;
 import com.example.onlycorn.activities.PostDetailActivity;
+import com.example.onlycorn.activities.PostLikeByActivity;
+import com.example.onlycorn.models.Comment;
+import com.example.onlycorn.models.Like;
 import com.example.onlycorn.models.Post;
 import com.example.onlycorn.utils.FirebaseUtils;
 import com.example.onlycorn.utils.Pop;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FieldValue;
@@ -37,9 +45,12 @@ import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.storage.StorageReference;
 import com.squareup.picasso.Picasso;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.HashMap;
@@ -54,6 +65,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
     private String myUid;
     private CollectionReference likesRef;
     private CollectionReference postsRef;
+    private CollectionReference commentsRef;
 
     private boolean processLike = false;
 
@@ -62,7 +74,8 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         this.postList = postList;
         myUid = FirebaseUtils.getUserAuth().getUid();
         postsRef = FirebaseUtils.getCollectionRef(Post.COLLECTION);
-        likesRef = FirebaseUtils.getCollectionRef(Post.LIKE_COLLECTION);
+        likesRef = FirebaseUtils.getCollectionRef(Like.COLLECTION);
+        commentsRef = FirebaseUtils.getCollectionRef(Comment.COLLECTION);
     }
 
     @NonNull
@@ -82,7 +95,22 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         String desc = postList.get(i).getDescription();
         String timeStamp = postList.get(i).getTimeStamp();
         String postImage = postList.get(i).getImage();
-        String likes = postList.get(i).getLikes();
+        DocumentReference likeRef = FirebaseUtils.getDocumentRef(Like.COLLECTION, pId);
+        likeRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
+            @Override
+            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
+                if (documentSnapshot != null) {
+                    if (!documentSnapshot.contains("likes_count")) {
+                        Map<String, Object> initLikeCount = new HashMap<>();
+                        initLikeCount.put("likes_count", "0");
+                        likeRef.set(initLikeCount, SetOptions.merge());
+                    }
+                    String likes = documentSnapshot.getString("likes_count");
+                    postViewHolder.likesTv.setText(String.format("%s Likes", likes));
+                }
+            }
+        });
+        String comments = postList.get(i).getComments();
 
         Calendar calendar = Calendar.getInstance(Locale.getDefault());
         calendar.setTimeInMillis(Long.parseLong(timeStamp));
@@ -107,7 +135,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         postViewHolder.captionTv.setText(caption);
         postViewHolder.descriptionTv.setText(desc);
         postViewHolder.timestampTv.setText(time);
-        postViewHolder.likesTv.setText(String.format("%s Likes", likes));
+        postViewHolder.commentsTv.setText(String.format("%s Comments", comments));
         setLikes(postViewHolder, pId);
 
         postViewHolder.moreButton.setOnClickListener(new View.OnClickListener() {
@@ -122,24 +150,31 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             public void onClick(View v) {
                 int likes = Integer.parseInt(postList.get(i).getLikes());
                 processLike = true;
+                CollectionReference likesRef = FirebaseUtils.getCollectionRef(Like.COLLECTION);
+                CollectionReference postsRef = FirebaseUtils.getCollectionRef(Post.COLLECTION);
                 String postId = postList.get(i).getPostId();
                 likesRef.document(postId).get()
                         .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                             @Override
                             public void onSuccess(DocumentSnapshot documentSnapshot) {
-                                if (documentSnapshot.contains(uId)) {
-                                    postsRef.document(timeStamp).update("likes",  String.valueOf(likes - 1));
-
-                                    Map<String, Object> deleteField = new HashMap<>();
-                                    deleteField.put(uId, FieldValue.delete());
-                                    likesRef.document(postId).update(deleteField);
+                                if (!documentSnapshot.contains("likes_count")) {
+                                    Map<String, Object> initLikeCount = new HashMap<>();
+                                    initLikeCount.put("likes_count", "0");
+                                    likesRef.document(postId).set(initLikeCount, SetOptions.merge());
+                                }
+                                if (documentSnapshot.contains(uId) && processLike) {
+                                    int likes_count = Integer.parseInt((String) documentSnapshot.get("likes_count"));
+                                    Map<String, Object> removeUserLike = new HashMap<>();
+                                    removeUserLike.put(uId, FieldValue.delete());
+                                    removeUserLike.put("likes_count", String.valueOf(likes_count - 1));
+                                    likesRef.document(postId).update(removeUserLike);
                                     processLike = false;
                                 } else {
-                                    postsRef.document(timeStamp).update("likes",  String.valueOf(likes + 1));
-
+                                    int likes_count = Integer.parseInt((String) documentSnapshot.get("likes_count"));
                                     Map<String, Object> newUserLike = new HashMap<>();
                                     newUserLike.put(uId, "Liked");
-                                    likesRef.document(postId).set(newUserLike);
+                                    newUserLike.put("likes_count", String.valueOf(likes_count + 1));
+                                    likesRef.document(postId).set(newUserLike, SetOptions.merge());
                                     processLike = false;
                                 }
                             }
@@ -164,7 +199,13 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         postViewHolder.shareButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Pop.pop(context, "Share");
+                BitmapDrawable bitmapDrawable = (BitmapDrawable)postViewHolder.postImage.getDrawable();
+                if (bitmapDrawable == null) {
+                    shareTextOnly(caption, desc);
+                } else {
+                    Bitmap bitmap = bitmapDrawable.getBitmap();
+                    shareImageAndText(caption, desc, bitmap);
+                }
             }
         });
 
@@ -176,6 +217,55 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 context.startActivity(intent);
             }
         });
+
+        postViewHolder.likesTv.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(context, PostLikeByActivity.class);
+                intent.putExtra("postId", pId);
+                context.startActivity(intent);
+            }
+        });
+    }
+
+    private Uri saveImageToShare(Bitmap bitmap) {
+        File imageFolder = new File(context.getCacheDir(), "images");
+        Uri uri = null;
+        try {
+            imageFolder.mkdirs();
+            File file = new File(imageFolder, "shared_image.png");
+            FileOutputStream stream = new FileOutputStream(file);
+            bitmap.compress(Bitmap.CompressFormat.PNG, 90, stream);
+            stream.flush();
+            stream.close();
+            uri = FileProvider.getUriForFile(context, "com.example.onlycorn", file);
+        } catch (Exception e) {
+            Pop.pop(context, e.getMessage());
+        }
+        return uri;
+    }
+
+    private void shareImageAndText(String caption, String desc, Bitmap bitmap) {
+        String shareBody = caption + "\n" + desc;
+
+        Uri uri = saveImageToShare(bitmap);
+
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("image/png");
+        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Subject here");
+        shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
+        shareIntent.putExtra(Intent.EXTRA_TEXT, shareBody);
+        context.startActivity(Intent.createChooser(shareIntent, "Share Via"));
+    }
+
+    private void shareTextOnly(String caption, String desc) {
+        String shareBody = caption + "\n" + desc;
+
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("textplain/");
+        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Subject Here");
+        shareIntent.putExtra(Intent.EXTRA_TEXT, shareBody);
+        context.startActivity(Intent.createChooser(shareIntent, "Share Via"));
     }
 
     private void setLikes(PostViewHolder postViewHolder, String postId) {
@@ -191,18 +281,31 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         });
     }
 
+    private void updateCommentCount(String postId, int likes) {
+        DocumentReference postRef = FirebaseUtils.getDocumentRef(Post.COLLECTION, postId);
+        postRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
+            @Override
+            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
+                if (documentSnapshot != null && processLike) {
+                    documentSnapshot.getReference().update("likes", String.valueOf(likes));
+                    processLike = false;
+                }
+            }
+        });
+    }
+
     @Override
     public int getItemCount() {
         return postList.size();
     }
 
     public class PostViewHolder extends RecyclerView.ViewHolder {
-
         ImageView avatarIv, postImage;
 
-        TextView usernameTv, timestampTv, captionTv, descriptionTv, likesTv;
+        TextView usernameTv, timestampTv, captionTv, descriptionTv, likesTv, commentsTv;
 
         ImageButton moreButton, likeButton, commentButton, shareButton;
+
         LinearLayout profileLayout;
 
         public PostViewHolder(@NonNull View itemView) {
@@ -214,6 +317,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             captionTv = itemView.findViewById(R.id.captionTv);
             descriptionTv = itemView.findViewById(R.id.descriptionTv);
             likesTv = itemView.findViewById(R.id.likes);
+            commentsTv = itemView.findViewById(R.id.comments);
             moreButton = itemView.findViewById(R.id.moreButton);
             likeButton = itemView.findViewById(R.id.likeButton);
             commentButton = itemView.findViewById(R.id.commentButton);

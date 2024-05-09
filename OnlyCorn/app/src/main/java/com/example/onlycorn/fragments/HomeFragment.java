@@ -48,6 +48,8 @@ public class HomeFragment extends Fragment {
     }
 
     private void loadPosts() {
+        final int[] scrollPosition = {0};
+
         CollectionReference postRef = FirebaseUtils.getCollectionRef(Post.COLLECTION);
         postRef.addSnapshotListener(new EventListener<QuerySnapshot>() {
             @Override
@@ -59,7 +61,16 @@ public class HomeFragment extends Fragment {
                 }
                 postAdapter = new PostAdapter(getActivity(), postList);
                 recyclerView.setAdapter(postAdapter);
+
+                if (scrollPosition[0] != RecyclerView.NO_POSITION) {
+                    recyclerView.scrollToPosition(scrollPosition[0]);
+                }
             }
         });
+
+        LinearLayoutManager layoutManager = (LinearLayoutManager) recyclerView.getLayoutManager();
+        if (layoutManager != null) {
+            scrollPosition[0] = layoutManager.findFirstVisibleItemPosition();
+        }
     }
 }

@@ -21,6 +21,12 @@
         android:theme="@style/Theme.OnlyCorn"
         tools:targetApi="31">
         <activity
+            android:name=".activities.PostLikeByActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.SettingsActivity"
+            android:exported="false" />
+        <activity
             android:name=".activities.PostDetailActivity"
             android:exported="false" />
         <activity
@@ -53,6 +59,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.example.onlycorn"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/paths" />
+        </provider>
     </application>
 
 </manifest>

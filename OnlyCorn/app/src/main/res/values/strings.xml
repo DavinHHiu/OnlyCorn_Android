@@ -8,4 +8,6 @@
     <string name="have_no_account" translatable="false">Have no account? Register</string>
     <string name="forgotten_password" translatable="false">Forgotten password</string>
     <string name="default_web_client_id" translatable="false">488134872019-omtbjfapv4hs53rh8lh92480akqo01u0.apps.googleusercontent.com</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>

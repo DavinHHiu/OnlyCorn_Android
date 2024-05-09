@@ -22,11 +22,17 @@ import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 
+import com.android.volley.AuthFailureError;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.example.onlycorn.R;
 import com.example.onlycorn.models.Post;
 import com.example.onlycorn.models.User;
@@ -49,7 +55,12 @@ import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 import com.squareup.picasso.Picasso;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.ByteArrayOutputStream;
+import java.util.HashMap;
+import java.util.Map;
 
 public class AddPostActivity extends AppCompatActivity {
     private static final int CAMERA_REQUEST_CODE = 100;
@@ -153,7 +164,8 @@ public class AddPostActivity extends AppCompatActivity {
         String timestamp = String.valueOf(System.currentTimeMillis());
         Post postDb = new Post(postId, captionEt.getText().toString(),
                 descriptionEt.getText().toString(), "noImage", timestamp,
-                post.getLikes(), user.getUserId(), user.getUsername(), user.getImage());
+                post.getLikes(), post.getComments(), user.getUserId(),
+                user.getUsername(), user.getImage());
         DocumentReference ref = FirebaseUtils.getDocumentRef(Post.COLLECTION, postId);
         ref.set(postDb)
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
@@ -193,7 +205,8 @@ public class AddPostActivity extends AppCompatActivity {
                         if (uriTask.isSuccessful()) {
                             Post postDb = new Post(postId, captionEt.getText().toString(),
                                     descriptionEt.getText().toString(), downloadUri, timestamp,
-                                    post.getLikes(), user.getUserId(), user.getUsername(), user.getImage());
+                                    post.getLikes(), post.getComments(), user.getUserId(),
+                                    user.getUsername(), user.getImage());
                             DocumentReference ref = FirebaseUtils.getDocumentRef(Post.COLLECTION, postId);
                             ref.set(postDb)
                                     .addOnSuccessListener(new OnSuccessListener<Void>() {
@@ -249,7 +262,8 @@ public class AddPostActivity extends AppCompatActivity {
                                         if (uriTask.isSuccessful()) {
                                             Post postDb = new Post(postId, captionEt.getText().toString(),
                                                     descriptionEt.getText().toString(), downloadUri, timestamp,
-                                                    post.getLikes(), user.getUserId(), user.getUsername(), user.getImage());
+                                                    post.getLikes(), post.getComments(), user.getUserId(),
+                                                    user.getUsername(), user.getImage());
                                             DocumentReference ref = FirebaseUtils.getDocumentRef(Post.COLLECTION, postId);
                                             ref.set(postDb)
                                                     .addOnSuccessListener(new OnSuccessListener<Void>() {
@@ -303,7 +317,7 @@ public class AddPostActivity extends AppCompatActivity {
                         try {
                             Picasso.get().load(post.getImage()).into(postImage);
                         } catch (Exception ex) {
-
+                            Picasso.get().load(post.getImage()).into(postImage);
                         }
                     }
                 }
@@ -335,9 +349,10 @@ public class AddPostActivity extends AppCompatActivity {
                               String downloadUri = postImage.getDrawable() != null ? uriTask.getResult().toString() : "noImage";
 
                               if (uriTask.isSuccessful()) {
-                                  Post postDb = new Post(postId, captionEt.getText().toString(),
+                                  Post postDb = new Post(timestamp, captionEt.getText().toString(),
                                           descriptionEt.getText().toString(), downloadUri, timestamp,
-                                          post.getLikes(), user.getUserId(), user.getUsername(), user.getImage());
+                                          "0", "0", user.getUserId(),
+                                          user.getUsername(), user.getImage());
                                   FirebaseUtils.getDocumentRef(Post.COLLECTION, timestamp).set(postDb)
                                           .addOnSuccessListener(new OnSuccessListener<Void>() {
                                               @Override
@@ -345,6 +360,12 @@ public class AddPostActivity extends AppCompatActivity {
                                                   pd.dismiss();
                                                   Pop.pop(AddPostActivity.this, "Posted");
                                                   startActivity(new Intent(AddPostActivity.this, MainActivity.class));
+                                                  prepareNotification(
+                                                          postId,
+                                                          user.getUsername() + " add new post",
+                                                          caption + "\n" + description,
+                                                          "PostNotification",
+                                                          "POST");
                                                   finish();
                                               }
                                           })
@@ -365,7 +386,87 @@ public class AddPostActivity extends AppCompatActivity {
                             Pop.pop(AddPostActivity.this, e.getMessage());
                         }
                     });
+        } else {
+            Post postDb = new Post(timestamp, captionEt.getText().toString(),
+                    descriptionEt.getText().toString(), "noImage", timestamp,
+                    "0", "0", user.getUserId(),
+                    user.getUsername(), user.getImage());
+            FirebaseUtils.getDocumentRef(Post.COLLECTION, timestamp).set(postDb)
+                    .addOnSuccessListener(new OnSuccessListener<Void>() {
+                        @Override
+                        public void onSuccess(Void unused) {
+                            pd.dismiss();
+                            Pop.pop(AddPostActivity.this, "Posted");
+                            startActivity(new Intent(AddPostActivity.this, MainActivity.class));
+                            prepareNotification(
+                                    postId,
+                                    user.getUsername() + " add new post",
+                                    caption + "\n" + description,
+                                    "PostNotification",
+                                    "POST");
+                            finish();
+                        }
+                    })
+                    .addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            pd.dismiss();
+                            Pop.pop(AddPostActivity.this, e.getMessage());
+                        }
+                    });
         }
+    }
+
+    private void prepareNotification(String postId, String caption, String description,
+                                     String notificationType, String notificationTopic) {
+        String NOTIFICATION_TOPIC = "/topics/" + notificationTopic;
+        String NOTIFICATION_TITLE = caption;
+        String NOTIFICATION_MESSAGE = description;
+        String NOTIFICATION_TYPE = notificationType;
+
+        JSONObject notificationJo = new JSONObject();
+        JSONObject notificationBodyJo = new JSONObject();
+
+        try {
+            notificationBodyJo.put("notificationType", NOTIFICATION_TYPE);
+            notificationBodyJo.put("sender", user.getUserId());
+            notificationBodyJo.put("postId", postId);
+            notificationBodyJo.put("pCaption", NOTIFICATION_TITLE);
+            notificationBodyJo.put("pDescription", NOTIFICATION_MESSAGE);
+
+            notificationJo.put("to", NOTIFICATION_TOPIC);
+            notificationJo.put("data", notificationBodyJo);
+        } catch (JSONException e) {
+            Pop.pop(this, e.getMessage());
+        }
+
+        sendPostNotification(notificationJo);
+    }
+
+    private void sendPostNotification(JSONObject notificationJo) {
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest("https://fcm.googleapis.com/fcm/send", notificationJo,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        Log.d("FCM_RESPONSE", "onResponse: " + response.toString());
+                    }
+                },
+                new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError volleyError) {
+                        Pop.pop(AddPostActivity.this, volleyError.toString());
+                    }
+                })
+        {
+            @Override
+            public Map<String, String> getHeaders() throws AuthFailureError {
+                Map<String, String> header = new HashMap<>();
+                header.put("Content-Type", "application/json");
+                header.put("Authorization", "key=de6b13a7be301d2603174ebfa13084512d369acf");
+                return header;
+            }
+        };
+        Volley.newRequestQueue(this).add(jsonObjectRequest);
     }
 
     private void showImagePickDialog() {
