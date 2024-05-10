@@ -49,21 +49,26 @@
             android:padding="10dp"
             android:background="@drawable/editextstyle"
             android:hint="Enter caption"
-            android:singleLine="true"
+            android:inputType="textMultiLine"
+            android:gravity="top|start"
             android:layout_width="match_parent"
             android:layout_height="wrap_content" />
         <ImageView
             android:id="@+id/postImage"
             android:layout_width="match_parent"
             android:minHeight="200dp"
+            android:src="@drawable/upload_image_icon"
+            android:background="@drawable/upload_image_picker"
             android:layout_height="wrap_content" />
         <com.google.android.exoplayer2.ui.PlayerView
             android:id="@+id/playerView"
             android:layout_width="match_parent"
+            android:visibility="gone"
             android:minHeight="300dp"
             android:layout_height="wrap_content"/>
         <Button
             android:id="@+id/uploadButton"
+            android:layout_marginTop="10dp"
             android:background="@drawable/button_primary"
             android:textColor="@color/white"
             android:textAllCaps="false"

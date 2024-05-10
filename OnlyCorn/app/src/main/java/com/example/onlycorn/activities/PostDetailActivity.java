@@ -303,7 +303,6 @@ public class PostDetailActivity extends AppCompatActivity {
                                 new SimpleDateFormat("dd/MM/yyyy hh:mm aa").format(calendar.getTime());
 
                         captionTv.setText(post.getCaption());
-                        descriptionTv.setText(post.getDescription());
                         usernameTv.setText(post.getUsername());
                         DocumentReference likeRef = FirebaseUtils.getDocumentRef(Like.COLLECTION, post.getPostId());
                         likeRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {

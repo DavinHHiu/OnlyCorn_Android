@@ -21,6 +21,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Build;
@@ -39,10 +40,12 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.bumptech.glide.Glide;
 import com.example.onlycorn.R;
 import com.example.onlycorn.models.Post;
 import com.example.onlycorn.models.User;
 import com.example.onlycorn.utils.FirebaseUtils;
+import com.example.onlycorn.utils.ImageUtils;
 import com.example.onlycorn.utils.Pop;
 import com.github.dhaval2404.imagepicker.ImagePicker;
 import com.google.android.exoplayer2.ExoPlayer;
@@ -77,25 +80,18 @@ import kotlin.Unit;
 import kotlin.jvm.functions.Function1;
 
 public class AddPostActivity extends AppCompatActivity {
-    private static final int CAMERA_REQUEST_CODE = 100;
-    private static final int STORAGE_REQUEST_CODE = 200;
-    private static final int IMAGE_PICK_REQUEST_CODE = 300;
-    private static final int REQUEST_CODE_PICK_MEDIA = 101;
-
-    private EditText captionEt, descriptionEt;
+    private EditText captionEt;
     private ImageView postImage;
     private Button uploadButton;
     private PlayerView playerView;
 
     private Uri imageUri;
+    private String type;
     private ProgressDialog pd;
     private boolean editPost;
     private String postId;
     private Post post;
     private User user;
-
-    String[] cameraPermissions;
-    String[] storagePermissions;
 
     ActivityResultLauncher<Intent> imagePickLauncher;
     ActivityResultLauncher<PickVisualMediaRequest> pickMedia;
@@ -126,9 +122,6 @@ public class AddPostActivity extends AppCompatActivity {
             uploadButton.setText("Upload");
         }
 
-        cameraPermissions = new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_MEDIA_VIDEO};
-        storagePermissions = new String[]{Manifest.permission.READ_MEDIA_VIDEO};
-
         imagePickLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
                 result -> {
                     if (result.getResultCode() == Activity.RESULT_OK) {
@@ -142,17 +135,29 @@ public class AddPostActivity extends AppCompatActivity {
                 }
         );
         pickMedia = registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
+                    imageUri = uri;
                     if (uri != null) {
-                        imageUri = uri;
                         String mimeType = getContentResolver().getType(imageUri);
-                        if (mimeType.startsWith("image/")) {
-                            Picasso.get().load(imageUri).into(postImage);
-                        } else if (mimeType.startsWith("video/")) {
+                        if (mimeType != null && mimeType.startsWith("image/")) {
+                            type = "image";
+                            postImage.setVisibility(View.VISIBLE);
+                            playerView.setVisibility(View.GONE);
+
+                            postImage.setBackground(null);
+                            BitmapFactory.Options options = ImageUtils.getImageSize(getApplicationContext(), uri);
+                            postImage.setMinimumHeight(options.outHeight);
+
+                            Glide.with(getApplicationContext()).load(uri).into(postImage);
+                        } else if (mimeType != null && mimeType.startsWith("video/")) {
+                            type = "video";
+                            playerView.setVisibility(View.VISIBLE);
+                            postImage.setVisibility(View.GONE);
                             SimpleExoPlayer player = new SimpleExoPlayer.Builder(this).build();
-                                    player.setMediaItem(MediaItem.fromUri(uri));
-                                    player.prepare();
-                                    player.play();
-                                    playerView.setPlayer(player);
+                            player.setMediaItem(MediaItem.fromUri(uri));
+                            player.prepare();
+                            player.play();
+
+                            playerView.setPlayer(player);
                         }
                     } else {
                         Log.d("PhotoPicker", "No media selected");
@@ -175,11 +180,17 @@ public class AddPostActivity extends AppCompatActivity {
             }
         });
 
+        playerView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showImagePickDialog();
+            }
+        });
+
         uploadButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 String caption = captionEt.getText().toString().trim();
-                String description = descriptionEt.getText().toString().trim();
 
                 if (TextUtils.isEmpty(caption)) {
                     Pop.pop(AddPostActivity.this, "Enter caption...");
@@ -187,15 +198,15 @@ public class AddPostActivity extends AppCompatActivity {
                 }
 
                 if (editPost) {
-                    beginUpdate(caption, description, postId);
+                    beginUpdate(caption, postId);
                 } else {
-                    uploadData(caption, description);
+                    uploadData(caption);
                 }
             }
         });
     }
 
-    private void beginUpdate(String caption, String description, String postId) {
+    private void beginUpdate(String caption, String postId) {
         pd.setTitle("Updating Post...");
         pd.show();
 
@@ -210,10 +221,9 @@ public class AddPostActivity extends AppCompatActivity {
 
     private void updateWithoutImage() {
         String timestamp = String.valueOf(System.currentTimeMillis());
-        Post postDb = new Post(postId, captionEt.getText().toString(),
-                descriptionEt.getText().toString(), "noImage", timestamp,
-                post.getLikes(), post.getComments(), user.getUserId(),
-                user.getUsername(), user.getImage());
+        Post postDb = new Post(postId, captionEt.getText().toString(), "noMedia",
+                "noImage", timestamp, post.getLikes(), post.getComments(),
+                user.getUserId(), user.getUsername(), user.getImage());
         DocumentReference ref = FirebaseUtils.getDocumentRef(Post.COLLECTION, postId);
         ref.set(postDb)
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
@@ -251,10 +261,9 @@ public class AddPostActivity extends AppCompatActivity {
 
                         String downloadUri = uriTask.getResult().toString();
                         if (uriTask.isSuccessful()) {
-                            Post postDb = new Post(postId, captionEt.getText().toString(),
-                                    descriptionEt.getText().toString(), downloadUri, timestamp,
-                                    post.getLikes(), post.getComments(), user.getUserId(),
-                                    user.getUsername(), user.getImage());
+                            Post postDb = new Post(postId, captionEt.getText().toString(), "image",
+                                    downloadUri, timestamp, post.getLikes(), post.getComments(),
+                                    user.getUserId(), user.getUsername(), user.getImage());
                             DocumentReference ref = FirebaseUtils.getDocumentRef(Post.COLLECTION, postId);
                             ref.set(postDb)
                                     .addOnSuccessListener(new OnSuccessListener<Void>() {
@@ -308,10 +317,9 @@ public class AddPostActivity extends AppCompatActivity {
 
                                         String downloadUri = uriTask.getResult().toString();
                                         if (uriTask.isSuccessful()) {
-                                            Post postDb = new Post(postId, captionEt.getText().toString(),
-                                                    descriptionEt.getText().toString(), downloadUri, timestamp,
-                                                    post.getLikes(), post.getComments(), user.getUserId(),
-                                                    user.getUsername(), user.getImage());
+                                            Post postDb = new Post(postId, captionEt.getText().toString(), "image",
+                                                    downloadUri, timestamp, post.getLikes(), post.getComments(),
+                                                    user.getUserId(), user.getUsername(), user.getImage());
                                             DocumentReference ref = FirebaseUtils.getDocumentRef(Post.COLLECTION, postId);
                                             ref.set(postDb)
                                                     .addOnSuccessListener(new OnSuccessListener<Void>() {
@@ -349,31 +357,7 @@ public class AddPostActivity extends AppCompatActivity {
                 });
     }
 
-    private void loadPostData(String postId) {
-        CollectionReference ref = FirebaseUtils.getCollectionRef(Post.COLLECTION);
-        Query query = ref.orderBy("postId").whereEqualTo("postId", postId);
-        query.addSnapshotListener(new EventListener<QuerySnapshot>() {
-            @Override
-            public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
-                for (QueryDocumentSnapshot qds : queryDocumentSnapshots) {
-                    post = qds.toObject(Post.class);
-
-                    captionEt.setText(post.getCaption());
-                    descriptionEt.setText(post.getDescription() == null ? post.getDescription() : "");
-
-                    if (!post.getImage().equals("noImage")) {
-                        try {
-                            Picasso.get().load(post.getImage()).into(postImage);
-                        } catch (Exception ex) {
-                            Picasso.get().load(post.getImage()).into(postImage);
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    private void uploadData(String caption, String description) {
+    private void uploadData(String caption) {
         pd.setTitle("Publishing post...");
         pd.show();
 
@@ -381,7 +365,7 @@ public class AddPostActivity extends AppCompatActivity {
 
         String filePathAndName = "Posts/" + "post_" + timestamp;
 
-        if (postImage.getDrawable() != null) {
+        if ("image".equals(type)) {
             Bitmap bitmap = ((BitmapDrawable) postImage.getDrawable()).getBitmap();
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
@@ -390,43 +374,89 @@ public class AddPostActivity extends AppCompatActivity {
             StorageReference ref = FirebaseStorage.getInstance().getReference().child(filePathAndName);
             ref.putBytes(data)
                     .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                                              @Override
-                                              public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                                                  Task<Uri> uriTask = taskSnapshot.getStorage().getDownloadUrl();
-                                                  while (!uriTask.isSuccessful()) ;
-                                                  String downloadUri = postImage.getDrawable() != null ? uriTask.getResult().toString() : "noImage";
+                          @Override
+                          public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                              Task<Uri> uriTask = taskSnapshot.getStorage().getDownloadUrl();
+                              while (!uriTask.isSuccessful()) ;
+                              String downloadUri = postImage.getDrawable() != null ? uriTask.getResult().toString() : "noImage";
 
-                                                  if (uriTask.isSuccessful()) {
-                                                      Post postDb = new Post(timestamp, captionEt.getText().toString(),
-                                                              descriptionEt.getText().toString(), downloadUri, timestamp,
-                                                              "0", "0", user.getUserId(),
-                                                              user.getUsername(), user.getImage());
-                                                      FirebaseUtils.getDocumentRef(Post.COLLECTION, timestamp).set(postDb)
-                                                              .addOnSuccessListener(new OnSuccessListener<Void>() {
-                                                                  @Override
-                                                                  public void onSuccess(Void unused) {
-                                                                      pd.dismiss();
-                                                                      Pop.pop(AddPostActivity.this, "Posted");
-                                                                      startActivity(new Intent(AddPostActivity.this, MainActivity.class));
-                                                                      prepareNotification(
-                                                                              postId,
-                                                                              user.getUsername() + " add new post",
-                                                                              caption + "\n" + description,
-                                                                              "PostNotification",
-                                                                              "POST");
-                                                                      finish();
-                                                                  }
-                                                              })
-                                                              .addOnFailureListener(new OnFailureListener() {
-                                                                  @Override
-                                                                  public void onFailure(@NonNull Exception e) {
-                                                                      pd.dismiss();
-                                                                      Pop.pop(AddPostActivity.this, e.getMessage());
-                                                                  }
-                                                              });
-                                                  }
+                              if (uriTask.isSuccessful()) {
+                                  Post postDb = new Post(timestamp, captionEt.getText().toString(), "image",
+                                          downloadUri, timestamp, "0", "0", user.getUserId(),
+                                          user.getUsername(), user.getImage());
+                                  FirebaseUtils.getDocumentRef(Post.COLLECTION, timestamp).set(postDb)
+                                          .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                              @Override
+                                              public void onSuccess(Void unused) {
+                                                  pd.dismiss();
+                                                  Pop.pop(AddPostActivity.this, "Posted");
+                                                  startActivity(new Intent(AddPostActivity.this, MainActivity.class));
+                                                  prepareNotification(
+                                                          postId,
+                                                          user.getUsername() + " add new post",
+                                                          caption,
+                                                          "PostNotification",
+                                                          "POST");
+                                                  finish();
                                               }
-                                          }
+                                          })
+                                          .addOnFailureListener(new OnFailureListener() {
+                                              @Override
+                                              public void onFailure(@NonNull Exception e) {
+                                                  pd.dismiss();
+                                                  Pop.pop(AddPostActivity.this, e.getMessage());
+                                              }
+                                          });
+                              }
+                          }
+                      }
+                    ).addOnFailureListener(new OnFailureListener() {
+                        @Override
+                        public void onFailure(@NonNull Exception e) {
+                            pd.dismiss();
+                            Pop.pop(AddPostActivity.this, e.getMessage());
+                        }
+                    });
+        } else if ("video".equals(type)) {
+            StorageReference ref = FirebaseStorage.getInstance().getReference().child(filePathAndName);
+            ref.putFile(imageUri)
+                    .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+                          @Override
+                          public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                              Task<Uri> uriTask = taskSnapshot.getStorage().getDownloadUrl();
+                              while (!uriTask.isSuccessful()) ;
+                              String downloadUri = imageUri != null ? uriTask.getResult().toString() : "noImage";
+
+                              if (uriTask.isSuccessful()) {
+                                  Post postDb = new Post(timestamp, captionEt.getText().toString(), "video",
+                                          downloadUri, timestamp, "0", "0", user.getUserId(),
+                                          user.getUsername(), user.getImage());
+                                  FirebaseUtils.getDocumentRef(Post.COLLECTION, timestamp).set(postDb)
+                                          .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                              @Override
+                                              public void onSuccess(Void unused) {
+                                                  pd.dismiss();
+                                                  Pop.pop(AddPostActivity.this, "Posted");
+                                                  startActivity(new Intent(AddPostActivity.this, MainActivity.class));
+                                                  prepareNotification(
+                                                          postId,
+                                                          user.getUsername() + " add new post",
+                                                          caption,
+                                                          "PostNotification",
+                                                          "POST");
+                                                  finish();
+                                              }
+                                          })
+                                          .addOnFailureListener(new OnFailureListener() {
+                                              @Override
+                                              public void onFailure(@NonNull Exception e) {
+                                                  pd.dismiss();
+                                                  Pop.pop(AddPostActivity.this, e.getMessage());
+                                              }
+                                          });
+                              }
+                          }
+                      }
                     ).addOnFailureListener(new OnFailureListener() {
                         @Override
                         public void onFailure(@NonNull Exception e) {
@@ -435,10 +465,9 @@ public class AddPostActivity extends AppCompatActivity {
                         }
                     });
         } else {
-            Post postDb = new Post(timestamp, captionEt.getText().toString(),
-                    descriptionEt.getText().toString(), "noImage", timestamp,
-                    "0", "0", user.getUserId(),
-                    user.getUsername(), user.getImage());
+            Post postDb = new Post(timestamp, captionEt.getText().toString(), "noMedia",
+                    "noImage", timestamp, "0", "0",
+                    user.getUserId(), user.getUsername(), user.getImage());
             FirebaseUtils.getDocumentRef(Post.COLLECTION, timestamp).set(postDb)
                     .addOnSuccessListener(new OnSuccessListener<Void>() {
                         @Override
@@ -449,7 +478,7 @@ public class AddPostActivity extends AppCompatActivity {
                             prepareNotification(
                                     postId,
                                     user.getUsername() + " add new post",
-                                    caption + "\n" + description,
+                                    caption,
                                     "PostNotification",
                                     "POST");
                             finish();
@@ -463,6 +492,29 @@ public class AddPostActivity extends AppCompatActivity {
                         }
                     });
         }
+    }
+
+    private void loadPostData(String postId) {
+        CollectionReference ref = FirebaseUtils.getCollectionRef(Post.COLLECTION);
+        Query query = ref.orderBy("postId").whereEqualTo("postId", postId);
+        query.addSnapshotListener(new EventListener<QuerySnapshot>() {
+            @Override
+            public void onEvent(@Nullable QuerySnapshot queryDocumentSnapshots, @Nullable FirebaseFirestoreException e) {
+                for (QueryDocumentSnapshot qds : queryDocumentSnapshots) {
+                    post = qds.toObject(Post.class);
+
+                    captionEt.setText(post.getCaption());
+
+                    if (!post.getImage().equals("noImage")) {
+                        try {
+                            Picasso.get().load(post.getImage()).into(postImage);
+                        } catch (Exception ex) {
+                            Picasso.get().load(post.getImage()).into(postImage);
+                        }
+                    }
+                }
+            }
+        });
     }
 
     private void prepareNotification(String postId, String caption, String description,
@@ -543,7 +595,7 @@ public class AddPostActivity extends AppCompatActivity {
     }
 
     private void pickFromCamera() {
-        ImagePicker.with(this).crop(9f, 16f).maxResultSize(1080, 1920)
+        ImagePicker.with(this).cameraOnly().crop(9f, 16f).maxResultSize(1080, 1920)
                 .createIntent(new Function1<Intent, Unit>() {
                     @Override
                     public Unit invoke(Intent intent) {

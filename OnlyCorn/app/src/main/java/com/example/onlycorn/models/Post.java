@@ -5,9 +5,9 @@ public class Post {
 
     private String postId;
 
-    private String caption;
+    private String type;
 
-    private String description;
+    private String caption;
 
     private String image;
 
@@ -26,11 +26,11 @@ public class Post {
     public Post() {
     }
 
-    public Post(String postId, String caption, String description, String image, String timeStamp,
+    public Post(String postId, String caption, String type, String image, String timeStamp,
                 String likes, String comments, String uid, String username, String userAva) {
         this.postId = postId;
         this.caption = caption;
-        this.description = description;
+        this.type = type;
         this.image = image;
         this.timeStamp = timeStamp;
         this.likes = likes;
@@ -54,14 +54,6 @@ public class Post {
 
     public void setCaption(String caption) {
         this.caption = caption;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
     }
 
     public String getImage() {
@@ -118,5 +110,13 @@ public class Post {
 
     public void setUserAva(String userAva) {
         this.userAva = userAva;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
     }
 }

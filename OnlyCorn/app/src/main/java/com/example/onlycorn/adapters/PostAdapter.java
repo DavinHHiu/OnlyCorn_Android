@@ -33,7 +33,11 @@ import com.example.onlycorn.models.Comment;
 import com.example.onlycorn.models.Like;
 import com.example.onlycorn.models.Post;
 import com.example.onlycorn.utils.FirebaseUtils;
+import com.example.onlycorn.utils.ImageUtils;
 import com.example.onlycorn.utils.Pop;
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.ui.PlayerView;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.CollectionReference;
@@ -46,6 +50,7 @@ import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.SetOptions;
+import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.squareup.picasso.Picasso;
 
@@ -57,7 +62,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 
 public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder> {
     private Context context;
@@ -92,7 +96,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         String useAva = postList.get(i).getUserAva();
         String pId = postList.get(i).getPostId();
         String caption = postList.get(i).getCaption();
-        String desc = postList.get(i).getDescription();
         String timeStamp = postList.get(i).getTimeStamp();
         String postImage = postList.get(i).getImage();
         DocumentReference likeRef = FirebaseUtils.getDocumentRef(Like.COLLECTION, pId);
@@ -121,19 +124,30 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         } catch (Exception e) {
         }
 
-        if (postImage.equals("noImage")) {
+        String type = postList.get(i).getType();
+        if ("noMedia".equals(type)) {
             postViewHolder.postImage.setVisibility(View.GONE);
-        } else {
+            postViewHolder.playerView.setVisibility(View.GONE);
+        } if ("image".equals(type)) {
+            postViewHolder.playerView.setVisibility(View.GONE);
             postViewHolder.postImage.setVisibility(View.VISIBLE);
             try {
                 Picasso.get().load(postImage).placeholder(R.drawable.corn_svgrepo_com).into(postViewHolder.postImage);
             } catch (Exception e) {
             }
+        } else if ("video".equals(type)) {
+            postViewHolder.playerView.setVisibility(View.VISIBLE);
+            postViewHolder.postImage.setVisibility(View.GONE);
+            SimpleExoPlayer player = new SimpleExoPlayer.Builder(context).build();
+            player.setMediaItem(MediaItem.fromUri(Uri.parse(postImage)));
+            player.prepare();
+            player.play();
+
+            postViewHolder.playerView.setPlayer(player);
         }
 
         postViewHolder.usernameTv.setText(username);
         postViewHolder.captionTv.setText(caption);
-        postViewHolder.descriptionTv.setText(desc);
         postViewHolder.timestampTv.setText(time);
         postViewHolder.commentsTv.setText(String.format("%s Comments", comments));
         setLikes(postViewHolder, pId);
@@ -151,7 +165,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                 int likes = Integer.parseInt(postList.get(i).getLikes());
                 processLike = true;
                 CollectionReference likesRef = FirebaseUtils.getCollectionRef(Like.COLLECTION);
-                CollectionReference postsRef = FirebaseUtils.getCollectionRef(Post.COLLECTION);
                 String postId = postList.get(i).getPostId();
                 likesRef.document(postId).get()
                         .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
@@ -201,10 +214,10 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             public void onClick(View v) {
                 BitmapDrawable bitmapDrawable = (BitmapDrawable)postViewHolder.postImage.getDrawable();
                 if (bitmapDrawable == null) {
-                    shareTextOnly(caption, desc);
+                    shareTextOnly(caption);
                 } else {
                     Bitmap bitmap = bitmapDrawable.getBitmap();
-                    shareImageAndText(caption, desc, bitmap);
+                    shareImageAndText(caption, bitmap);
                 }
             }
         });
@@ -245,8 +258,8 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         return uri;
     }
 
-    private void shareImageAndText(String caption, String desc, Bitmap bitmap) {
-        String shareBody = caption + "\n" + desc;
+    private void shareImageAndText(String caption, Bitmap bitmap) {
+        String shareBody = caption;
 
         Uri uri = saveImageToShare(bitmap);
 
@@ -258,8 +271,8 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         context.startActivity(Intent.createChooser(shareIntent, "Share Via"));
     }
 
-    private void shareTextOnly(String caption, String desc) {
-        String shareBody = caption + "\n" + desc;
+    private void shareTextOnly(String caption) {
+        String shareBody = caption;
 
         Intent shareIntent = new Intent(Intent.ACTION_SEND);
         shareIntent.setType("textplain/");
@@ -301,6 +314,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
 
     public class PostViewHolder extends RecyclerView.ViewHolder {
         ImageView avatarIv, postImage;
+        PlayerView playerView;
 
         TextView usernameTv, timestampTv, captionTv, descriptionTv, likesTv, commentsTv;
 
@@ -312,6 +326,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             super(itemView);
             avatarIv = itemView.findViewById(R.id.avatarIv);
             postImage = itemView.findViewById(R.id.postImage);
+            playerView = itemView.findViewById(R.id.playerView);
             usernameTv = itemView.findViewById(R.id.usernameTv);
             timestampTv = itemView.findViewById(R.id.timeStampTv);
             captionTv = itemView.findViewById(R.id.captionTv);
