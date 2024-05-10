@@ -46,6 +46,14 @@ dependencies {
     implementation("com.firebaseui:firebase-ui-firestore:8.0.2")
     implementation("com.google.firebase:firebase-messaging:24.0.0")
 
+    implementation("com.github.dhaval2404:imagepicker:2.1")
+    implementation ("androidx.activity:activity-ktx:1.9.0")
+    implementation ("androidx.fragment:fragment-ktx:1.7.0")
+
+    implementation("com.google.android.exoplayer:exoplayer-core:2.19.1")
+    implementation("com.google.android.exoplayer:exoplayer-ui:2.19.1")
+//    implementation("com.henryblue.mxvideoplayer:xvideoplayer:1.2.1")
+
     implementation("com.android.volley:volley:1.2.1")
     implementation("com.squareup.picasso:picasso:2.8")
 

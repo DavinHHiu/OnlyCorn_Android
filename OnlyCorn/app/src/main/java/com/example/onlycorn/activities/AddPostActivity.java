@@ -1,5 +1,9 @@
 package com.example.onlycorn.activities;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.PickVisualMediaRequest;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
@@ -10,6 +14,7 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.ContentValues;
 import android.content.DialogInterface;
@@ -24,6 +29,7 @@ import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
+import android.webkit.MimeTypeMap;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
@@ -38,6 +44,11 @@ import com.example.onlycorn.models.Post;
 import com.example.onlycorn.models.User;
 import com.example.onlycorn.utils.FirebaseUtils;
 import com.example.onlycorn.utils.Pop;
+import com.github.dhaval2404.imagepicker.ImagePicker;
+import com.google.android.exoplayer2.ExoPlayer;
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.ui.PlayerView;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
@@ -62,14 +73,19 @@ import java.io.ByteArrayOutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
+import kotlin.Unit;
+import kotlin.jvm.functions.Function1;
+
 public class AddPostActivity extends AppCompatActivity {
     private static final int CAMERA_REQUEST_CODE = 100;
     private static final int STORAGE_REQUEST_CODE = 200;
     private static final int IMAGE_PICK_REQUEST_CODE = 300;
+    private static final int REQUEST_CODE_PICK_MEDIA = 101;
 
     private EditText captionEt, descriptionEt;
     private ImageView postImage;
     private Button uploadButton;
+    private PlayerView playerView;
 
     private Uri imageUri;
     private ProgressDialog pd;
@@ -80,6 +96,9 @@ public class AddPostActivity extends AppCompatActivity {
 
     String[] cameraPermissions;
     String[] storagePermissions;
+
+    ActivityResultLauncher<Intent> imagePickLauncher;
+    ActivityResultLauncher<PickVisualMediaRequest> pickMedia;
 
     @SuppressLint("SetTextI18n")
     @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
@@ -107,17 +126,46 @@ public class AddPostActivity extends AppCompatActivity {
             uploadButton.setText("Upload");
         }
 
-        cameraPermissions = new String[] {Manifest.permission.CAMERA, Manifest.permission.READ_MEDIA_VIDEO};
-        storagePermissions = new String[] {Manifest.permission.READ_MEDIA_VIDEO};
+        cameraPermissions = new String[]{Manifest.permission.CAMERA, Manifest.permission.READ_MEDIA_VIDEO};
+        storagePermissions = new String[]{Manifest.permission.READ_MEDIA_VIDEO};
 
+        imagePickLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == Activity.RESULT_OK) {
+                        Intent data = result.getData();
+                        if (data != null && data.getData() != null) {
+                            imageUri = data.getData();
+                            Picasso.get().load(imageUri).into(postImage);
+                            postImage.setBackground(null);
+                        }
+                    }
+                }
+        );
+        pickMedia = registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
+                    if (uri != null) {
+                        imageUri = uri;
+                        String mimeType = getContentResolver().getType(imageUri);
+                        if (mimeType.startsWith("image/")) {
+                            Picasso.get().load(imageUri).into(postImage);
+                        } else if (mimeType.startsWith("video/")) {
+                            SimpleExoPlayer player = new SimpleExoPlayer.Builder(this).build();
+                                    player.setMediaItem(MediaItem.fromUri(uri));
+                                    player.prepare();
+                                    player.play();
+                                    playerView.setPlayer(player);
+                        }
+                    } else {
+                        Log.d("PhotoPicker", "No media selected");
+                    }
+                });
         pd = new ProgressDialog(this);
 
     }
 
     private void initViews() {
         captionEt = findViewById(R.id.captionEt);
-        descriptionEt = findViewById(R.id.descriptionEt);
         postImage = findViewById(R.id.postImage);
+        playerView = findViewById(R.id.playerView);
         uploadButton = findViewById(R.id.uploadButton);
 
         postImage.setOnClickListener(new View.OnClickListener() {
@@ -188,7 +236,7 @@ public class AddPostActivity extends AppCompatActivity {
         String timestamp = String.valueOf(System.currentTimeMillis());
         String filePathAndName = "Posts/" + "post_" + timestamp;
 
-        Bitmap bitmap = ((BitmapDrawable)postImage.getDrawable()).getBitmap();
+        Bitmap bitmap = ((BitmapDrawable) postImage.getDrawable()).getBitmap();
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
         byte[] data = baos.toByteArray();
@@ -199,7 +247,7 @@ public class AddPostActivity extends AppCompatActivity {
                     @Override
                     public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
                         Task<Uri> uriTask = taskSnapshot.getStorage().getDownloadUrl();
-                        while(!uriTask.isSuccessful());
+                        while (!uriTask.isSuccessful()) ;
 
                         String downloadUri = uriTask.getResult().toString();
                         if (uriTask.isSuccessful()) {
@@ -245,7 +293,7 @@ public class AddPostActivity extends AppCompatActivity {
                         String timestamp = String.valueOf(System.currentTimeMillis());
                         String filePathAndName = "Posts/" + "post_" + timestamp;
 
-                        Bitmap bitmap = ((BitmapDrawable)postImage.getDrawable()).getBitmap();
+                        Bitmap bitmap = ((BitmapDrawable) postImage.getDrawable()).getBitmap();
                         ByteArrayOutputStream baos = new ByteArrayOutputStream();
                         bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
                         byte[] data = baos.toByteArray();
@@ -256,7 +304,7 @@ public class AddPostActivity extends AppCompatActivity {
                                     @Override
                                     public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
                                         Task<Uri> uriTask = taskSnapshot.getStorage().getDownloadUrl();
-                                        while(!uriTask.isSuccessful());
+                                        while (!uriTask.isSuccessful()) ;
 
                                         String downloadUri = uriTask.getResult().toString();
                                         if (uriTask.isSuccessful()) {
@@ -334,7 +382,7 @@ public class AddPostActivity extends AppCompatActivity {
         String filePathAndName = "Posts/" + "post_" + timestamp;
 
         if (postImage.getDrawable() != null) {
-            Bitmap bitmap = ((BitmapDrawable)postImage.getDrawable()).getBitmap();
+            Bitmap bitmap = ((BitmapDrawable) postImage.getDrawable()).getBitmap();
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, baos);
             byte[] data = baos.toByteArray();
@@ -342,43 +390,43 @@ public class AddPostActivity extends AppCompatActivity {
             StorageReference ref = FirebaseStorage.getInstance().getReference().child(filePathAndName);
             ref.putBytes(data)
                     .addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                          @Override
-                          public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
-                              Task<Uri> uriTask = taskSnapshot.getStorage().getDownloadUrl();
-                              while(!uriTask.isSuccessful());
-                              String downloadUri = postImage.getDrawable() != null ? uriTask.getResult().toString() : "noImage";
+                                              @Override
+                                              public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+                                                  Task<Uri> uriTask = taskSnapshot.getStorage().getDownloadUrl();
+                                                  while (!uriTask.isSuccessful()) ;
+                                                  String downloadUri = postImage.getDrawable() != null ? uriTask.getResult().toString() : "noImage";
 
-                              if (uriTask.isSuccessful()) {
-                                  Post postDb = new Post(timestamp, captionEt.getText().toString(),
-                                          descriptionEt.getText().toString(), downloadUri, timestamp,
-                                          "0", "0", user.getUserId(),
-                                          user.getUsername(), user.getImage());
-                                  FirebaseUtils.getDocumentRef(Post.COLLECTION, timestamp).set(postDb)
-                                          .addOnSuccessListener(new OnSuccessListener<Void>() {
-                                              @Override
-                                              public void onSuccess(Void unused) {
-                                                  pd.dismiss();
-                                                  Pop.pop(AddPostActivity.this, "Posted");
-                                                  startActivity(new Intent(AddPostActivity.this, MainActivity.class));
-                                                  prepareNotification(
-                                                          postId,
-                                                          user.getUsername() + " add new post",
-                                                          caption + "\n" + description,
-                                                          "PostNotification",
-                                                          "POST");
-                                                  finish();
+                                                  if (uriTask.isSuccessful()) {
+                                                      Post postDb = new Post(timestamp, captionEt.getText().toString(),
+                                                              descriptionEt.getText().toString(), downloadUri, timestamp,
+                                                              "0", "0", user.getUserId(),
+                                                              user.getUsername(), user.getImage());
+                                                      FirebaseUtils.getDocumentRef(Post.COLLECTION, timestamp).set(postDb)
+                                                              .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                                                  @Override
+                                                                  public void onSuccess(Void unused) {
+                                                                      pd.dismiss();
+                                                                      Pop.pop(AddPostActivity.this, "Posted");
+                                                                      startActivity(new Intent(AddPostActivity.this, MainActivity.class));
+                                                                      prepareNotification(
+                                                                              postId,
+                                                                              user.getUsername() + " add new post",
+                                                                              caption + "\n" + description,
+                                                                              "PostNotification",
+                                                                              "POST");
+                                                                      finish();
+                                                                  }
+                                                              })
+                                                              .addOnFailureListener(new OnFailureListener() {
+                                                                  @Override
+                                                                  public void onFailure(@NonNull Exception e) {
+                                                                      pd.dismiss();
+                                                                      Pop.pop(AddPostActivity.this, e.getMessage());
+                                                                  }
+                                                              });
+                                                  }
                                               }
-                                          })
-                                          .addOnFailureListener(new OnFailureListener() {
-                                              @Override
-                                              public void onFailure(@NonNull Exception e) {
-                                                  pd.dismiss();
-                                                  Pop.pop(AddPostActivity.this, e.getMessage());
-                                              }
-                                          });
-                              }
-                          }
-                      }
+                                          }
                     ).addOnFailureListener(new OnFailureListener() {
                         @Override
                         public void onFailure(@NonNull Exception e) {
@@ -456,8 +504,7 @@ public class AddPostActivity extends AppCompatActivity {
                     public void onErrorResponse(VolleyError volleyError) {
                         Pop.pop(AddPostActivity.this, volleyError.toString());
                     }
-                })
-        {
+                }) {
             @Override
             public Map<String, String> getHeaders() throws AuthFailureError {
                 Map<String, String> header = new HashMap<>();
@@ -478,14 +525,7 @@ public class AddPostActivity extends AppCompatActivity {
             @Override
             public void onClick(DialogInterface dialog, int which) {
                 if (which == 0) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        if (!checkCameraPermission()) {
-                            requestCameraPermission();
-                            requestStoragePermission();
-                        } else {
-                            pickFromCamera();
-                        }
-                    }
+                    pickFromCamera();
                 }
                 if (which == 1) {
                     pickFromGallery();
@@ -496,68 +536,20 @@ public class AddPostActivity extends AppCompatActivity {
         builder.create().show();
     }
 
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode) {
-            case CAMERA_REQUEST_CODE:
-                if (grantResults.length > 0) {
-                    boolean cameraAccepted = grantResults[0] == PackageManager.PERMISSION_GRANTED;
-                    boolean storageAccepted = grantResults[1] == PackageManager.PERMISSION_GRANTED;
-                    if (cameraAccepted && storageAccepted) {
-                        pickFromCamera();
-                    }
-                } else {
-                    Pop.pop(this, "Camera & Storage both permission are neccessary");
-                }
-        }
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.TIRAMISU)
-    private boolean checkCameraPermission() {
-        return ContextCompat.checkSelfPermission(this,
-                        Manifest.permission.CAMERA) == (PackageManager.PERMISSION_GRANTED) &&
-                ContextCompat.checkSelfPermission(this,
-                        Manifest.permission.READ_MEDIA_VIDEO) == (PackageManager.PERMISSION_GRANTED);
-    }
-
-    private void requestCameraPermission() {
-        ActivityCompat.requestPermissions(this, cameraPermissions, CAMERA_REQUEST_CODE);
-    }
-
-    private void requestStoragePermission() {
-        ActivityCompat.requestPermissions(this, storagePermissions, STORAGE_REQUEST_CODE);
-    }
-
     private void pickFromGallery() {
-        Intent intent = new Intent(Intent.ACTION_PICK);
-        intent.setType("image/*");
-        startActivityForResult(intent, IMAGE_PICK_REQUEST_CODE);
+        pickMedia.launch(new PickVisualMediaRequest.Builder()
+                .setMediaType(ActivityResultContracts.PickVisualMedia.ImageAndVideo.INSTANCE)
+                .build());
     }
 
     private void pickFromCamera() {
-        ContentValues contentValues = new ContentValues();
-        contentValues.put(MediaStore.Images.Media.TITLE, "Temp Pick");
-        contentValues.put(MediaStore.Images.Media.DESCRIPTION, "Temp Desc");
-
-        imageUri = getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues);
-
-        Intent intent  = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        intent.putExtra(MediaStore.EXTRA_OUTPUT, imageUri);
-        startActivityForResult(intent, CAMERA_REQUEST_CODE);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        if (resultCode == RESULT_OK) {
-            if (requestCode == CAMERA_REQUEST_CODE) {
-                postImage.setImageURI(imageUri);
-            }
-            else if (requestCode == IMAGE_PICK_REQUEST_CODE) {
-                imageUri = data.getData();
-                postImage.setImageURI(imageUri);
-            }
-        }
-        super.onActivityResult(requestCode, resultCode, data);
+        ImagePicker.with(this).crop(9f, 16f).maxResultSize(1080, 1920)
+                .createIntent(new Function1<Intent, Unit>() {
+                    @Override
+                    public Unit invoke(Intent intent) {
+                        imagePickLauncher.launch(intent);
+                        return null;
+                    }
+                });
     }
 }
