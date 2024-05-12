@@ -1,23 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:orientation="vertical">
+    android:layout_height="match_parent" >
 
     <SearchView
-        android:id="@+id/search_view_posts"
+        android:id="@+id/search_view_users"
         android:layout_marginRight="10dp"
         android:layout_marginLeft="10dp"
-        android:queryHint="Nhập từ khóa"
+        android:queryHint="Nhập tên người dùng"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
     <androidx.recyclerview.widget.RecyclerView
-        app:layout_constraintTop_toTopOf="parent"
-        android:id="@+id/postRecycleView"
+        android:id="@+id/user_recycleView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
-
 </LinearLayout>

@@ -44,7 +44,7 @@
 
                         <LinearLayout
                             android:layout_weight="1"
-                            android:orientation="horizontal"
+                            android:orientation="vertical"
                             android:layout_width="0dp"
                             android:paddingLeft="15dp"
                             android:gravity="center_vertical"
@@ -60,7 +60,7 @@
                             <TextView
                                 android:id="@+id/timeStampTv"
                                 android:text="2d"
-                                android:textSize="12sp"
+                                android:textSize="9sp"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content" />
                         </LinearLayout>
@@ -81,26 +81,22 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:autoLink="all"/>
-                    <TextView
-                        android:id="@+id/descriptionTv"
-                        android:textSize="12sp"
-                        android:text="Description"
-                        android:layout_marginTop="5dp"
-                        android:layout_marginBottom="5dp"
-                        android:textColor="@color/black"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:autoLink="all"/>
                     <androidx.cardview.widget.CardView
                         app:cardCornerRadius="3dp"
                         app:cardElevation="0dp"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content">
                         <ImageView
                             android:id="@+id/postImage"
-                            android:scaleType="centerCrop"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" />
+                            android:layout_width="match_parent"
+                            android:layout_height="500dp"
+                            android:scaleType="centerCrop" />
+                        <com.google.android.exoplayer2.ui.PlayerView
+                            android:id="@+id/playerView"
+                            android:layout_width="match_parent"
+                            android:layout_height="570dp"
+                            android:visibility="gone"
+                            app:resize_mode="fill" />
                     </androidx.cardview.widget.CardView>
                     <RelativeLayout
                         android:layout_marginTop="20dp"
@@ -110,6 +106,7 @@
                         <ImageButton
                             android:id="@+id/likeButton"
                             android:src="@drawable/icon_heart"
+                            android:layout_marginLeft="5dp"
                             android:background="@null"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content" />
@@ -117,6 +114,7 @@
                             android:id="@+id/shareButton"
                             android:src="@drawable/icon_share"
                             android:background="@null"
+                            android:layout_marginRight="5dp"
                             android:layout_alignParentEnd="true"
                             android:layout_marginLeft="15dp"
                             android:layout_width="wrap_content"
@@ -128,27 +126,28 @@
                         android:layout_height="wrap_content">
                         <TextView
                             android:id="@+id/likes"
-                            android:text="2,361 likes"
-                            android:textStyle="bold"
-                            android:layout_marginTop="10dp"
-                            android:layout_marginLeft="5dp"
-                            android:textColor="@color/black"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" />
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="10dp"
+                            android:layout_marginLeft="10dp"
+                            android:textSize="11sp"
+                            android:text="0 likes"
+                            android:textColor="@color/black"
+                            android:textStyle="bold" />
+
                         <TextView
                             android:id="@+id/comments"
-                            android:text="2,361 comments"
-                            android:textStyle="bold"
-                            android:layout_marginTop="10dp"
-                            android:layout_marginLeft="15dp"
-                            android:textColor="@color/black"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content" />
+                            android:layout_height="wrap_content"
+                            android:layout_marginLeft="10dp"
+                            android:layout_marginTop="10dp"
+                            android:textSize="11sp"
+                            android:text="0 bình luận" />
                     </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
             <TextView
-                android:text="Comments"
+                android:text="Bình luận"
                 android:textColor="@color/black"
                 android:gravity="center_vertical"
                 android:padding="5dp"
@@ -157,10 +156,12 @@
                 android:drawableStart="@drawable/icon_comment"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
+
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/commentRecView"
+                android:paddingTop="1dp"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
@@ -168,14 +169,16 @@
         android:id="@+id/commentContainer"
         android:layout_alignParentEnd="true"
         android:layout_alignParentBottom="true"
+        android:background="@color/white"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
         <ImageView
             android:src="@drawable/corn_svgrepo_com"
             android:id="@+id/myAvatarIv"
             android:layout_centerVertical="true"
-            android:layout_width="50dp"
-            android:layout_height="50dp" />
+            android:layout_marginLeft="20dp"
+            android:layout_width="30dp"
+            android:layout_height="30dp" />
 
         <EditText
             android:id="@+id/commentEt"
@@ -186,6 +189,7 @@
             android:layout_toEndOf="@+id/myAvatarIv"
             android:background="@color/white"
             android:hint="Add a comment"
+            android:textSize="11sp"
             android:inputType="textCapSentences|textMultiLine"
             android:padding="10dp"
             android:paddingRight="50dp"/>
@@ -193,9 +197,11 @@
             android:id="@+id/sendButton"
             android:layout_alignParentEnd="true"
             android:layout_alignParentRight="true"
+            android:layout_marginRight="20dp"
             android:layout_centerVertical="true"
             android:src="@drawable/icon_send"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+            android:background="@drawable/button_primary"
+            android:layout_width="40dp"
+            android:layout_height="25dp" />
     </RelativeLayout>
 </RelativeLayout>

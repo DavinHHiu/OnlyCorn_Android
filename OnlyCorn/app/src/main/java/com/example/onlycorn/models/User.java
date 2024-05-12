@@ -2,12 +2,15 @@ package com.example.onlycorn.models;
 
 public class User {
     public static final String COLLECTION = "users";
+    public static final String FOLLOWING_COLLECTION = "followings";
+    public static final String FOLLOWER_COLLECTION = "followers";
     private String userId;
     private String name;
     private String email;
     private String username;
     private String image;
     private String status;
+    private String fcmToken;
 
     public User() {
     }
@@ -19,10 +22,12 @@ public class User {
         this.setFirstUsername();
     }
 
-    public User(String userId, String email, String username, String status) {
+    public User(String userId, String name, String email, String username, String image, String status) {
         this.userId = userId;
+        this.name = name;
         this.email = email;
         this.username = username;
+        this.image = image;
         this.status = status;
     }
 
@@ -79,5 +84,13 @@ public class User {
 
     public void setImage(String image) {
         this.image = image;
+    }
+
+    public String getFcmToken() {
+        return fcmToken;
+    }
+
+    public void setFcmToken(String fcmToken) {
+        this.fcmToken = fcmToken;
     }
 }

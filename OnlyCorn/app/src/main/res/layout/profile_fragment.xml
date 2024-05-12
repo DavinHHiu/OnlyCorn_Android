@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:app="http://schemas.android.com/apk/res-auto">
@@ -8,22 +8,26 @@
         android:id="@+id/actionBar"
         android:orientation="horizontal"
         android:layout_width="match_parent"
+        app:layout_constraintTop_toTopOf="parent"
         android:layout_height="60dp">
         <TextView
             android:id="@+id/usernameTv"
-            android:text="pinkhius"
+            android:text=""
             android:paddingLeft="20dp"
-            android:textSize="25sp"
+            android:textSize="20sp"
             android:textColor="@color/black"
+            android:background="@color/white"
             android:textStyle="bold"
             android:gravity="center_vertical"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="match_parent" />
     </LinearLayout>
     <ScrollView
-        android:layout_below="@+id/actionBar"
+        app:layout_constraintTop_toBottomOf="@+id/actionBar"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:layout_marginTop="60dp"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="match_parent">
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
@@ -42,19 +46,19 @@
                     <ImageView
                         android:id="@+id/avatarIv"
                         android:layout_marginStart="20dp"
-                        android:src="@drawable/icon_home"
                         android:layout_width="80dp"
                         android:layout_height="80dp"
                         android:background="@drawable/image_view_custom"
-                        android:padding="5dp"/>
+                        android:padding="3dp"/>
                     <TextView
-                        android:text="Nguyễn Hồng Hiếu"
+                        android:id="@+id/nameTv"
+                        android:text=""
                         android:layout_marginTop="10dp"
-                        android:layout_marginLeft="10dp"
+                        android:layout_marginLeft="20dp"
                         android:textSize="12sp"
                         android:textStyle="bold"
                         android:textColor="@color/black"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content" />
                 </LinearLayout>
                 <LinearLayout
@@ -76,16 +80,18 @@
                             android:textColor="@color/black"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content" />
+
                         <TextView
                             android:id="@+id/posts"
-                            android:text="1"
-                            android:textSize="15sp"
-                            android:layout_gravity="center"
-                            android:textColor="@color/black"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" />
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:text="0"
+                            android:textColor="@color/black"
+                            android:textSize="15sp" />
                     </LinearLayout>
                     <LinearLayout
+                        android:id="@+id/followingButton"
                         android:layout_width="wrap_content"
                         android:gravity="center_vertical"
                         android:padding="10dp"
@@ -99,16 +105,18 @@
                             android:textColor="@color/black"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content" />
+
                         <TextView
-                            android:id="@+id/following"
-                            android:text="20"
-                            android:textSize="15sp"
-                            android:layout_gravity="center"
-                            android:textColor="@color/black"
+                            android:id="@+id/followings"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content" />
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:text="0"
+                            android:textColor="@color/black"
+                            android:textSize="15sp" />
                     </LinearLayout>
                     <LinearLayout
+                        android:id="@+id/followerButton"
                         android:layout_width="wrap_content"
                         android:gravity="center_vertical"
                         android:layout_height="match_parent"
@@ -123,7 +131,7 @@
                             android:layout_height="wrap_content" />
                         <TextView
                             android:id="@+id/followers"
-                            android:text="20"
+                            android:text="0"
                             android:textSize="15sp"
                             android:layout_gravity="center"
                             android:textColor="@color/black"
@@ -150,9 +158,10 @@
             </LinearLayout>
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recycleViewPosts"
+                android:layout_marginTop="20dp"
                 android:layout_below="@+id/profileInfo"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content" />
         </RelativeLayout>
     </ScrollView>
-</RelativeLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -3,6 +3,7 @@ package com.example.onlycorn.utils;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.graphics.BitmapFactory;
+import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 
 import java.io.IOException;
@@ -21,6 +22,23 @@ public class ImageUtils {
             e.printStackTrace();
         }
         return options;
+    }
+
+    public static int getVideoSize(Uri uri) {
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+        retriever.setDataSource(uri.toString());
+
+        String height = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_VIDEO_HEIGHT);
+        try {
+            retriever.release();
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+        }
+
+        if (height != null) {
+            return Integer.parseInt(height);
+        }
+        return -1;
     }
 
     public static String getType(Context context, Uri uri) {

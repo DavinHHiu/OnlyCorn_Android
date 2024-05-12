@@ -11,16 +11,16 @@
         android:orientation="horizontal"
         android:layout_width="match_parent"
         android:layout_height="60dp">
+
         <TextView
             android:id="@+id/usernameTv"
-            android:text="Chỉnh sửa thông tin cá nhân"
-            android:paddingLeft="20dp"
-            android:textSize="17sp"
-            android:textColor="@color/black"
-            android:textStyle="bold"
-            android:gravity="center"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:text="Chỉnh sửa thông tin cá nhân"
+            android:textColor="@color/black"
+            android:textSize="15sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <com.google.android.material.divider.MaterialDivider
@@ -33,13 +33,13 @@
         android:id="@+id/avatarIv"
         android:layout_below="@+id/actionBar"
         android:layout_marginTop="20dp"
-        android:layout_marginBottom="20dp"
+        android:layout_marginBottom="10dp"
         android:src="@drawable/icon_home"
         android:layout_centerHorizontal="true"
-        android:layout_width="70dp"
-        android:layout_height="70dp"
+        android:layout_width="77dp"
+        android:layout_height="77dp"
         android:background="@drawable/image_view_custom"
-        android:padding="5dp"/>
+        android:padding="3dp"/>
 
     <TextView
         android:id="@+id/edit_avatar"
@@ -49,6 +49,7 @@
         android:textColor="@color/primary"
         android:textStyle="bold"
         android:gravity="center"
+        android:textSize="9sp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
@@ -76,11 +77,13 @@
             <TextView
                 android:layout_weight="2"
                 android:text="Tên"
-                android:layout_width="50dp"
+                android:textSize="11sp"
+                android:layout_width="70dp"
                 android:layout_height="wrap_content" />
             <EditText
                 android:id="@+id/nameEt"
                 android:layout_weight="8"
+                android:textSize="11sp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
         </LinearLayout>
@@ -93,11 +96,13 @@
             <TextView
                 android:layout_weight="2"
                 android:text="Tên người dùng"
-                android:layout_width="50dp"
+                android:textSize="11sp"
+                android:layout_width="70dp"
                 android:layout_height="wrap_content" />
             <EditText
                 android:id="@+id/usernameEt"
                 android:layout_weight="8"
+                android:textSize="11sp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
         </LinearLayout>
@@ -110,11 +115,13 @@
             <TextView
                 android:layout_weight="2"
                 android:text="Email"
-                android:layout_width="50dp"
+                android:textSize="11sp"
+                android:layout_width="70dp"
                 android:layout_height="wrap_content" />
             <EditText
                 android:id="@+id/emailEt"
                 android:layout_weight="8"
+                android:textSize="11sp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content" />
         </LinearLayout>
@@ -126,6 +133,7 @@
                 android:id="@+id/updateButton"
                 android:text="Cập nhật"
                 android:textAllCaps="false"
+                android:textSize="11sp"
                 android:textColor="@color/white"
                 android:background="@drawable/button_primary"
                 android:layout_width="match_parent"

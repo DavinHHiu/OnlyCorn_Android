@@ -3,6 +3,7 @@ package com.example.onlycorn.adapters;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,9 +14,12 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.example.onlycorn.R;
 import com.example.onlycorn.models.Comment;
 import com.example.onlycorn.models.Post;
+import com.example.onlycorn.models.User;
 import com.example.onlycorn.utils.DateStringUtils;
 import com.example.onlycorn.utils.FirebaseUtils;
 import com.example.onlycorn.utils.Pop;
@@ -56,19 +60,13 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.Commnent
     @Override
     public void onBindViewHolder(@NonNull CommnentViewHolder commnentViewHolder, int i) {
         Comment comment = listComments.get(i);
-        String username = comment.getUsername();
-        String userAva = comment.getUserAva();
+        String userId = comment.getUserId();
         String commentText = comment.getComment();
         String timestamp= comment.getTimestamp();
+        loadUserInfo(userId, commnentViewHolder);
 
-        commnentViewHolder.usernameTv.setText(username);
         commnentViewHolder.commentTv.setText(commentText);
         commnentViewHolder.timestampTv.setText(DateStringUtils.format(timestamp));
-        try {
-            Picasso.get().load(userAva).placeholder(R.drawable.corn_svgrepo_com).into(commnentViewHolder.avatarIv);
-        } catch (Exception e) {
-            Picasso.get().load(userAva).placeholder(R.drawable.corn_svgrepo_com).into(commnentViewHolder.avatarIv);
-        }
         commnentViewHolder.itemView.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
@@ -93,6 +91,30 @@ public class CommentAdapter extends RecyclerView.Adapter<CommentAdapter.Commnent
                     Pop.pop(context, "Can't delete other's comment");
                 }
                 return true;
+            }
+        });
+    }
+
+
+    private void loadUserInfo(String userId, CommnentViewHolder commnentViewHolder) {
+        DocumentReference userRef = FirebaseUtils.getDocumentRef(User.COLLECTION, userId);
+        userRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
+            @Override
+            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
+                if (documentSnapshot != null) {
+                    User user = documentSnapshot.toObject(User.class);
+
+                    if (user != null) {
+                        commnentViewHolder.usernameTv.setText(user.getUsername());
+
+                        try {
+                            Glide.with(context).load(Uri.parse(user.getImage()))
+                                    .apply(RequestOptions.circleCropTransform()).into(commnentViewHolder.avatarIv);
+                        } catch (Exception ex) {
+                            System.out.println(ex.getMessage());
+                        }
+                    }
+                }
             }
         });
     }

@@ -19,8 +19,8 @@
             android:layout_height="wrap_content">
             <ImageView
                 android:id="@+id/avatarIv"
+                android:layout_marginLeft="20dp"
                 android:background="@drawable/image_view_custom"
-                android:src="@drawable/icon_add"
                 android:layout_width="70dp"
                 android:layout_height="70dp" />
             <LinearLayout
@@ -39,9 +39,9 @@
                 <TextView
                     android:id="@+id/nameTv"
                     android:text="Person Email"
+                    android:textSize="12sp"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/gray"/>
+                    android:layout_height="wrap_content" />
             </LinearLayout>
         </LinearLayout>
         <EditText
@@ -63,9 +63,9 @@
         <com.google.android.exoplayer2.ui.PlayerView
             android:id="@+id/playerView"
             android:layout_width="match_parent"
+            app:resize_mode="fit"
             android:visibility="gone"
-            android:minHeight="300dp"
-            android:layout_height="wrap_content"/>
+            android:layout_height="570dp"/>
         <Button
             android:id="@+id/uploadButton"
             android:layout_marginTop="10dp"

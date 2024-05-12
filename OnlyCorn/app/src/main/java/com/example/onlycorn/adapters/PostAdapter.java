@@ -24,6 +24,8 @@ import androidx.annotation.Nullable;
 import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.example.onlycorn.R;
 import com.example.onlycorn.activities.AddPostActivity;
 import com.example.onlycorn.activities.OtherProfileActivity;
@@ -32,14 +34,17 @@ import com.example.onlycorn.activities.PostLikeByActivity;
 import com.example.onlycorn.models.Comment;
 import com.example.onlycorn.models.Like;
 import com.example.onlycorn.models.Post;
+import com.example.onlycorn.models.User;
 import com.example.onlycorn.utils.FirebaseUtils;
 import com.example.onlycorn.utils.ImageUtils;
 import com.example.onlycorn.utils.Pop;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.ui.PlayerView;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -54,6 +59,8 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.squareup.picasso.Picasso;
 
+import org.json.JSONObject;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
@@ -67,9 +74,7 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
     private Context context;
     private List<Post> postList;
     private String myUid;
-    private CollectionReference likesRef;
-    private CollectionReference postsRef;
-    private CollectionReference commentsRef;
+    private User user ;
 
     private boolean processLike = false;
 
@@ -77,9 +82,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         this.context = context;
         this.postList = postList;
         myUid = FirebaseUtils.getUserAuth().getUid();
-        postsRef = FirebaseUtils.getCollectionRef(Post.COLLECTION);
-        likesRef = FirebaseUtils.getCollectionRef(Like.COLLECTION);
-        commentsRef = FirebaseUtils.getCollectionRef(Comment.COLLECTION);
     }
 
     @NonNull
@@ -92,37 +94,47 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
     @Override
     public void onBindViewHolder(@NonNull PostViewHolder postViewHolder, @SuppressLint("RecyclerView") int i) {
         String uId = postList.get(i).getUid();
-        String username = postList.get(i).getUsername();
-        String useAva = postList.get(i).getUserAva();
         String pId = postList.get(i).getPostId();
         String caption = postList.get(i).getCaption();
         String timeStamp = postList.get(i).getTimeStamp();
         String postImage = postList.get(i).getImage();
+
+        loadUserInfo(uId, postViewHolder);
         DocumentReference likeRef = FirebaseUtils.getDocumentRef(Like.COLLECTION, pId);
         likeRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
             @Override
             public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
                 if (documentSnapshot != null) {
-                    if (!documentSnapshot.contains("likes_count")) {
-                        Map<String, Object> initLikeCount = new HashMap<>();
-                        initLikeCount.put("likes_count", "0");
-                        likeRef.set(initLikeCount, SetOptions.merge());
+                    Map<String, Object> data = documentSnapshot.getData();
+                    if (data != null) {
+                        postViewHolder.likesTv.setText(String.format("%s lượt thích", data.size()));
                     }
-                    String likes = documentSnapshot.getString("likes_count");
-                    postViewHolder.likesTv.setText(String.format("%s Likes", likes));
+                    if (documentSnapshot.contains(myUid)) {
+                        postViewHolder.likeButton.setImageResource(R.drawable.icon_heart_filled);
+                    } else {
+                        postViewHolder.likeButton.setImageResource(R.drawable.icon_heart);
+                    }
                 }
             }
         });
+        DocumentReference commentsRef = FirebaseUtils.getDocumentRef(Comment.COLLECTION, pId);
+        commentsRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
+            @Override
+            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
+                if (documentSnapshot != null) {
+                    Map<String, Object> data = documentSnapshot.getData();
+                    if (data != null) {
+                        postViewHolder.commentsTv.setText(String.format("Xem tất cả %s bình luận", data.size()));
+                    }
+                }
+            }
+        });
+
         String comments = postList.get(i).getComments();
 
         Calendar calendar = Calendar.getInstance(Locale.getDefault());
         calendar.setTimeInMillis(Long.parseLong(timeStamp));
         @SuppressLint("SimpleDateFormat") String time = new SimpleDateFormat("dd/MM/yyyy hh:mm aa").format(calendar.getTime());
-
-        try {
-            Picasso.get().load(useAva).placeholder(R.drawable.icon_home).into(postViewHolder.avatarIv);
-        } catch (Exception e) {
-        }
 
         String type = postList.get(i).getType();
         if ("noMedia".equals(type)) {
@@ -131,6 +143,9 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         } if ("image".equals(type)) {
             postViewHolder.playerView.setVisibility(View.GONE);
             postViewHolder.postImage.setVisibility(View.VISIBLE);
+
+            postViewHolder.postImage.setMinimumHeight(470);
+            postViewHolder.postImage.setMaxHeight(470);
             try {
                 Picasso.get().load(postImage).placeholder(R.drawable.corn_svgrepo_com).into(postViewHolder.postImage);
             } catch (Exception e) {
@@ -146,11 +161,9 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             postViewHolder.playerView.setPlayer(player);
         }
 
-        postViewHolder.usernameTv.setText(username);
         postViewHolder.captionTv.setText(caption);
         postViewHolder.timestampTv.setText(time);
         postViewHolder.commentsTv.setText(String.format("%s Comments", comments));
-        setLikes(postViewHolder, pId);
 
         postViewHolder.moreButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -162,7 +175,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         postViewHolder.likeButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                int likes = Integer.parseInt(postList.get(i).getLikes());
                 processLike = true;
                 CollectionReference likesRef = FirebaseUtils.getCollectionRef(Like.COLLECTION);
                 String postId = postList.get(i).getPostId();
@@ -170,24 +182,16 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
                         .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                             @Override
                             public void onSuccess(DocumentSnapshot documentSnapshot) {
-                                if (!documentSnapshot.contains("likes_count")) {
-                                    Map<String, Object> initLikeCount = new HashMap<>();
-                                    initLikeCount.put("likes_count", "0");
-                                    likesRef.document(postId).set(initLikeCount, SetOptions.merge());
-                                }
-                                if (documentSnapshot.contains(uId) && processLike) {
-                                    int likes_count = Integer.parseInt((String) documentSnapshot.get("likes_count"));
+                                if (documentSnapshot.contains(myUid) && processLike) {
                                     Map<String, Object> removeUserLike = new HashMap<>();
-                                    removeUserLike.put(uId, FieldValue.delete());
-                                    removeUserLike.put("likes_count", String.valueOf(likes_count - 1));
+                                    removeUserLike.put(myUid, FieldValue.delete());
                                     likesRef.document(postId).update(removeUserLike);
                                     processLike = false;
                                 } else {
-                                    int likes_count = Integer.parseInt((String) documentSnapshot.get("likes_count"));
                                     Map<String, Object> newUserLike = new HashMap<>();
-                                    newUserLike.put(uId, "Liked");
-                                    newUserLike.put("likes_count", String.valueOf(likes_count + 1));
+                                    newUserLike.put(myUid, "Liked");
                                     likesRef.document(postId).set(newUserLike, SetOptions.merge());
+                                    sendLikeNotification(postList.get(i));
                                     processLike = false;
                                 }
                             }
@@ -241,6 +245,62 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         });
     }
 
+    private void sendLikeNotification(Post post) {
+        String postOwnerId = post.getUid();
+        FirebaseUtils.getDocumentRef(User.COLLECTION, postOwnerId).addSnapshotListener(new EventListener<DocumentSnapshot>() {
+            @Override
+            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
+                if (documentSnapshot != null) {
+                    String fcmToken = documentSnapshot.getString("fcmToken");
+                    if (fcmToken != null) {
+                        try{
+                            JSONObject jsonObject = new JSONObject();
+
+                            JSONObject notificationObj = new JSONObject();
+                            notificationObj.put("title", "Only Corn");
+                            notificationObj.put("body", String.format("%s vừa thích bài viết của bạn.", user.getUsername()));
+
+                            JSONObject dataObj = new JSONObject();
+                            dataObj.put("postId", post.getPostId());
+
+                            jsonObject.put("notification", notificationObj);
+                            jsonObject.put("data", dataObj);
+                            jsonObject.put("to", fcmToken);
+
+                            FirebaseUtils.callApi(jsonObject);
+                        } catch (Exception ex) {
+
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+
+    private void loadUserInfo(String uId, PostViewHolder postViewHolder) {
+        DocumentReference userRef = FirebaseUtils.getDocumentRef(User.COLLECTION, uId);
+        userRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
+            @Override
+            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
+                if (documentSnapshot != null) {
+                    user = documentSnapshot.toObject(User.class);
+
+                    if (user != null) {
+                        postViewHolder.usernameTv.setText(user.getUsername());
+
+                        try {
+                            Glide.with(context).load(Uri.parse(user.getImage()))
+                                    .apply(RequestOptions.circleCropTransform()).into(postViewHolder.avatarIv);
+                        } catch (Exception ex) {
+                            System.out.println(ex.getMessage());
+                        }
+                    }
+                }
+            }
+        });
+    }
+
     private Uri saveImageToShare(Bitmap bitmap) {
         File imageFolder = new File(context.getCacheDir(), "images");
         Uri uri = null;
@@ -281,19 +341,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
         context.startActivity(Intent.createChooser(shareIntent, "Share Via"));
     }
 
-    private void setLikes(PostViewHolder postViewHolder, String postId) {
-        likesRef.document(postId).addSnapshotListener(new EventListener<DocumentSnapshot>() {
-            @Override
-            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
-                if (documentSnapshot != null && documentSnapshot.contains(myUid)) {
-                    postViewHolder.likeButton.setImageResource(R.drawable.icon_heart_filled);
-                } else {
-                    postViewHolder.likeButton.setImageResource(R.drawable.icon_heart);
-                }
-            }
-        });
-    }
-
     private void updateCommentCount(String postId, int likes) {
         DocumentReference postRef = FirebaseUtils.getDocumentRef(Post.COLLECTION, postId);
         postRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
@@ -330,7 +377,6 @@ public class PostAdapter extends RecyclerView.Adapter<PostAdapter.PostViewHolder
             usernameTv = itemView.findViewById(R.id.usernameTv);
             timestampTv = itemView.findViewById(R.id.timeStampTv);
             captionTv = itemView.findViewById(R.id.captionTv);
-            descriptionTv = itemView.findViewById(R.id.descriptionTv);
             likesTv = itemView.findViewById(R.id.likes);
             commentsTv = itemView.findViewById(R.id.comments);
             moreButton = itemView.findViewById(R.id.moreButton);

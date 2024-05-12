@@ -5,10 +5,11 @@
     app:contentPadding="10dp"
     app:cardBackgroundColor="@color/white"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="70dp">
     <RelativeLayout
+        android:gravity="center_vertical"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="match_parent">
         <ImageView
             android:id="@+id/avatarIv"
             android:background="@drawable/image_view_custom"
@@ -35,6 +36,7 @@
             android:layout_toRightOf="@id/avatarIv"
             android:layout_below="@id/usernameTv"
             android:text="11h"
+            android:textSize="9sp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"/>
     </RelativeLayout>

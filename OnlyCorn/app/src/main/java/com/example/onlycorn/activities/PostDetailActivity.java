@@ -26,6 +26,8 @@ import android.widget.LinearLayout;
 import android.widget.PopupMenu;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.example.onlycorn.R;
 import com.example.onlycorn.adapters.CommentAdapter;
 import com.example.onlycorn.models.Comment;
@@ -34,6 +36,9 @@ import com.example.onlycorn.models.Post;
 import com.example.onlycorn.models.User;
 import com.example.onlycorn.utils.FirebaseUtils;
 import com.example.onlycorn.utils.Pop;
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.SimpleExoPlayer;
+import com.google.android.exoplayer2.ui.PlayerView;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.firestore.CollectionReference;
@@ -49,6 +54,8 @@ import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.storage.StorageReference;
 import com.squareup.picasso.Picasso;
 
+import org.json.JSONObject;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
@@ -60,10 +67,11 @@ import java.util.Map;
 
 public class PostDetailActivity extends AppCompatActivity {
     private ImageView avatarIv, postImage;
-    private TextView usernameTv, timestampTv, captionTv, descriptionTv, likesTv, commentTv;
+    private TextView usernameTv, timestampTv, captionTv, likesTv, commentTv;
     private ImageButton moreButton, likeButton, shareButton;
     private LinearLayout profileLayout;
     private RecyclerView commentRecView;
+    private PlayerView playerView;
 
     private ImageView  myAvatarIv;
     private EditText commentEt;
@@ -84,20 +92,6 @@ public class PostDetailActivity extends AppCompatActivity {
 
         initViews();
         initData();
-    }
-
-    private void setLikes(String postId) {
-        DocumentReference likesRef = FirebaseUtils.getDocumentRef(Like.COLLECTION, postId);
-        likesRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
-            @Override
-            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
-                if (documentSnapshot != null && documentSnapshot.contains(user.getUserId())) {
-                    likeButton.setImageResource(R.drawable.icon_heart_filled);
-                } else {
-                    likeButton.setImageResource(R.drawable.icon_heart);
-                }
-            }
-        });
     }
 
     private void showMoreOptions() {
@@ -189,38 +183,25 @@ public class PostDetailActivity extends AppCompatActivity {
     }
 
     private void likePost() {
-        int likes = Integer.parseInt(post.getLikes());
         processLike = true;
         CollectionReference likesRef = FirebaseUtils.getCollectionRef(Like.COLLECTION);
-        CollectionReference postsRef = FirebaseUtils.getCollectionRef(Post.COLLECTION);
         String postId = post.getPostId();
         String uId = user.getUserId();
         likesRef.document(postId).get()
                 .addOnSuccessListener(new OnSuccessListener<DocumentSnapshot>() {
                     @Override
                     public void onSuccess(DocumentSnapshot documentSnapshot) {
-                        if (!documentSnapshot.contains("likes_count")) {
-                            Map<String, Object> initLikeCount = new HashMap<>();
-                            initLikeCount.put("likes_count", "0");
-                            likesRef.document(postId).set(initLikeCount, SetOptions.merge());
-                        }
                         if (documentSnapshot.contains(uId) && processLike) {
-                            int likes_count = Integer.parseInt((String) documentSnapshot.get("likes_count"));
                             Map<String, Object> removeUserLike = new HashMap<>();
                             removeUserLike.put(uId, FieldValue.delete());
-                            removeUserLike.put("likes_count", String.valueOf(likes_count - 1));
                             likesRef.document(postId).update(removeUserLike);
                             processLike = false;
-
-                            likeButton.setImageResource(R.drawable.icon_heart);
                         } else {
-                            int likes_count = Integer.parseInt((String) documentSnapshot.get("likes_count"));
                             Map<String, Object> newUserLike = new HashMap<>();
                             newUserLike.put(uId, "Liked");
-                            newUserLike.put("likes_count", String.valueOf(likes_count + 1));
                             likesRef.document(postId).set(newUserLike, SetOptions.merge());
-
-                            likeButton.setImageResource(R.drawable.icon_heart_filled);
+                            sendLikeNotification();
+                            processLike = false;
                         }
                     }
                 })
@@ -229,6 +210,38 @@ public class PostDetailActivity extends AppCompatActivity {
                     public void onFailure(@NonNull Exception e) {
                     }
                 });
+    }
+
+    private void sendLikeNotification() {
+        String postOwnerId = post.getUid();
+        FirebaseUtils.getDocumentRef(User.COLLECTION, postOwnerId).addSnapshotListener(new EventListener<DocumentSnapshot>() {
+            @Override
+            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
+                if (documentSnapshot != null) {
+                    String fcmToken = documentSnapshot.getString("fcmToken");
+                    if (fcmToken != null) {
+                        try{
+                            JSONObject jsonObject = new JSONObject();
+
+                            JSONObject notificationObj = new JSONObject();
+                            notificationObj.put("title", "Only Corn");
+                            notificationObj.put("body", String.format("%s vừa thích bài viết của bạn.", user.getUsername()));
+
+                            JSONObject dataObj = new JSONObject();
+                            dataObj.put("postId", post.getPostId());
+
+                            jsonObject.put("notification", notificationObj);
+                            jsonObject.put("data", dataObj);
+                            jsonObject.put("to", fcmToken);
+
+                            FirebaseUtils.callApi(jsonObject);
+                        } catch (Exception ex) {
+
+                        }
+                    }
+                }
+            }
+        });
     }
 
     private void postComment() {
@@ -246,14 +259,14 @@ public class PostDetailActivity extends AppCompatActivity {
         Comment comment = new Comment(timestamp, post.getPostId(), user.getUserId(), user.getUsername(),
                 user.getImage(), timestamp, myComment);
         userComment.put(user.getUserId() + "_" + timestamp, comment);
-        commentRef.update(userComment)
+        commentRef.set(userComment)
                 .addOnSuccessListener(new OnSuccessListener<Void>() {
                     @Override
                     public void onSuccess(Void unused) {
                         pd.dismiss();
                         commentEt.setText("");
+                        sendCommentNotification();
                         Pop.pop(PostDetailActivity.this, "Comment added");
-                        updateCommentCount();
                     }
                 })
                 .addOnFailureListener(new OnFailureListener() {
@@ -265,26 +278,42 @@ public class PostDetailActivity extends AppCompatActivity {
                 });
     }
 
-    private void updateCommentCount() {
-        processComment = true;
-        DocumentReference postRef = FirebaseUtils.getDocumentRef(Post.COLLECTION, post.getPostId());
-        postRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
+    private void sendCommentNotification() {
+        String postOwnerId = post.getUid();
+        FirebaseUtils.getDocumentRef(User.COLLECTION, postOwnerId).addSnapshotListener(new EventListener<DocumentSnapshot>() {
             @Override
             public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
-                if (documentSnapshot != null && processComment) {
-                    String comments = documentSnapshot.getString("comments");
-                    int newComments = Integer.parseInt(comments) + 1;
-                    documentSnapshot.getReference().update("comments", String.valueOf(newComments));
-                    commentTv.setText(String.format("%s comments", newComments));
-                    processComment = false;
+                if (documentSnapshot != null) {
+                    String fcmToken = documentSnapshot.getString("fcmToken");
+                    if (fcmToken != null) {
+                        try{
+                            JSONObject jsonObject = new JSONObject();
+
+                            JSONObject notificationObj = new JSONObject();
+                            notificationObj.put("title", "Only Corn");
+                            notificationObj.put("body", String.format("%s vừa bình luận bài viết của bạn.", user.getUsername()));
+
+                            JSONObject dataObj = new JSONObject();
+                            dataObj.put("postId", post.getPostId());
+
+                            jsonObject.put("notification", notificationObj);
+                            jsonObject.put("data", dataObj);
+                            jsonObject.put("to", fcmToken);
+
+                            FirebaseUtils.callApi(jsonObject);
+                        } catch (Exception ex) {
+
+                        }
+                    }
                 }
             }
         });
     }
 
     private void initData() {
+        String uid = FirebaseUtils.getUserAuth().getUid();
         loadPost();
-        loadUser();
+        loadUser(uid, myAvatarIv, null, true);
     }
 
     private void loadPost() {
@@ -303,7 +332,6 @@ public class PostDetailActivity extends AppCompatActivity {
                                 new SimpleDateFormat("dd/MM/yyyy hh:mm aa").format(calendar.getTime());
 
                         captionTv.setText(post.getCaption());
-                        usernameTv.setText(post.getUsername());
                         DocumentReference likeRef = FirebaseUtils.getDocumentRef(Like.COLLECTION, post.getPostId());
                         likeRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
                             @Override
@@ -322,44 +350,79 @@ public class PostDetailActivity extends AppCompatActivity {
                         commentTv.setText(String.format("%s Comments", post.getComments()));
                         timestampTv.setText(time);
 
-                        if (post.getImage().equals("noImage")) {
+                        if ("noMedia".equals(post.getType())) {
                             postImage.setVisibility(View.GONE);
-                        } else {
+                            playerView.setVisibility(View.GONE);
+                        } if ("image".equals(post.getType())) {
+                            playerView.setVisibility(View.GONE);
                             postImage.setVisibility(View.VISIBLE);
+
+                            postImage.setMinimumHeight(470);
+                            postImage.setMaxHeight(470);
                             try {
-                                Picasso.get().load(post.getImage()).into(postImage);
+                                Picasso.get().load(post.getImage()).placeholder(R.drawable.corn_svgrepo_com).into(postImage);
                             } catch (Exception ex) {
-                                Picasso.get().load(post.getImage()).into(postImage);
                             }
+                        } else if ("video".equals(post.getType())) {
+                            playerView.setVisibility(View.VISIBLE);
+                            postImage.setVisibility(View.GONE);
+                            SimpleExoPlayer player = new SimpleExoPlayer.Builder(PostDetailActivity.this).build();
+                            player.setMediaItem(MediaItem.fromUri(Uri.parse(post.getImage())));
+                            player.prepare();
+                            player.play();
+
+                            playerView.setPlayer(player);
                         }
-                        try {
-                            Picasso.get().load(post.getUserAva()).into(avatarIv);
-                        } catch (Exception ex) {
-                            Picasso.get().load(post.getUserAva()).into(avatarIv);
-                        }
-                        setLikes(post.getPostId());
+                        loadUser(post.getUid(), avatarIv, usernameTv, false);
                         loadComments(post.getPostId());
+                        loadLikes(post.getPostId());
                     }
                 }
             }
         });
     }
 
-    private void loadUser() {
-        String uid = FirebaseUtils.getUserAuth().getUid();
-        DocumentReference userRef = FirebaseUtils.getDocumentRef(User.COLLECTION, uid);
+    private void loadLikes(String postId) {
+        DocumentReference likeRef = FirebaseUtils.getDocumentRef(Like.COLLECTION, postId);
+        likeRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
+            @Override
+            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
+                if (documentSnapshot != null) {
+                    Map<String, Object> data = documentSnapshot.getData();
+                    if (data != null) {
+                        likesTv.setText(String.format("%s lượt thích", data.size()));
+                    }
+                    if (documentSnapshot.contains(user.getUserId())) {
+                        likeButton.setImageResource(R.drawable.icon_heart_filled);
+                    } else {
+                        likeButton.setImageResource(R.drawable.icon_heart);
+                    }
+                }
+            }
+        });
+    }
+
+    private void loadUser(String userId, ImageView userPhoto, TextView userName, boolean saveGlobal) {
+        DocumentReference userRef = FirebaseUtils.getDocumentRef(User.COLLECTION, userId);
         userRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
             @Override
             public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
                 if (documentSnapshot != null) {
-                    user = documentSnapshot.toObject(User.class);
+                    User userDB = documentSnapshot.toObject(User.class);
 
-                    if (user != null) {
-                        try {
-                            Picasso.get().load(user.getImage()).placeholder(R.drawable.corn_svgrepo_com).into(myAvatarIv);
-                        } catch (Exception ex) {
-                            Picasso.get().load(user.getImage()).placeholder(R.drawable.corn_svgrepo_com).into(myAvatarIv);
+                    if (userDB != null) {
+                        if (userName != null) {
+                            userName.setText(userDB.getUsername());
                         }
+                        try {
+                            Glide.with(getApplicationContext()).load(Uri.parse(userDB.getImage()))
+                                    .apply(RequestOptions.circleCropTransform()).into(userPhoto);
+                        } catch (Exception ex) {
+                            System.out.println(ex.getMessage());
+                        }
+                    }
+                    if (saveGlobal) {
+                        user = userDB;
                     }
                 }
             }
@@ -375,11 +438,14 @@ public class PostDetailActivity extends AppCompatActivity {
                 listComments.clear();
                 if (documentSnapshot != null) {
                     Map<String, Object> fields = documentSnapshot.getData();
-                    for (Map.Entry<String, Object> entry: fields.entrySet()) {
-                        Comment comment = Comment.convertFromMap((Map<String, Object>)entry.getValue());
-                        listComments.add(comment);
-                        commentAdapter = new CommentAdapter(PostDetailActivity.this, listComments, user.getUserId(), post.getPostId());
-                        commentRecView.setAdapter(commentAdapter);
+                    if (fields != null) {
+                        commentTv.setText(String.format("%s bình luận", fields.size()));
+                        for (Map.Entry<String, Object> entry: fields.entrySet()) {
+                            Comment comment = Comment.convertFromMap((Map<String, Object>)entry.getValue());
+                            listComments.add(comment);
+                            commentAdapter = new CommentAdapter(PostDetailActivity.this, listComments, user.getUserId(), post.getPostId());
+                            commentRecView.setAdapter(commentAdapter);
+                        }
                     }
                 }
             }
@@ -403,36 +469,32 @@ public class PostDetailActivity extends AppCompatActivity {
         return uri;
     }
 
-    private void shareImageAndText(String caption, String desc, Bitmap bitmap) {
-        String shareBody = caption + "\n" + desc;
-
+    private void shareImageAndText(String caption, Bitmap bitmap) {
         Uri uri = saveImageToShare(bitmap);
 
         Intent shareIntent = new Intent(Intent.ACTION_SEND);
         shareIntent.setType("image/png");
         shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Subject here");
         shareIntent.putExtra(Intent.EXTRA_STREAM, uri);
-        shareIntent.putExtra(Intent.EXTRA_TEXT, shareBody);
+        shareIntent.putExtra(Intent.EXTRA_TEXT, caption);
         startActivity(Intent.createChooser(shareIntent, "Share Via"));
     }
 
-    private void shareTextOnly(String caption, String desc) {
-        String shareBody = caption + "\n" + desc;
-
+    private void shareTextOnly(String caption) {
         Intent shareIntent = new Intent(Intent.ACTION_SEND);
         shareIntent.setType("textplain/");
         shareIntent.putExtra(Intent.EXTRA_SUBJECT, "Subject Here");
-        shareIntent.putExtra(Intent.EXTRA_TEXT, shareBody);
+        shareIntent.putExtra(Intent.EXTRA_TEXT, caption);
         startActivity(Intent.createChooser(shareIntent, "Share Via"));
     }
 
     private void initViews() {
         avatarIv = findViewById(R.id.avatarIv);
         postImage = findViewById(R.id.postImage);
+        playerView = findViewById(R.id.playerView);
         usernameTv = findViewById(R.id.usernameTv);
         timestampTv = findViewById(R.id.timeStampTv);
         captionTv = findViewById(R.id.captionTv);
-        descriptionTv = findViewById(R.id.descriptionTv);
         likesTv = findViewById(R.id.likes);
         commentTv = findViewById(R.id.comments);
         moreButton = findViewById(R.id.moreButton);
@@ -471,14 +533,13 @@ public class PostDetailActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 String caption = captionTv.getText().toString();
-                String desc = descriptionTv.getText().toString();
 
                 BitmapDrawable bitmapDrawable = (BitmapDrawable)postImage.getDrawable();
                 if (bitmapDrawable == null) {
-                    shareTextOnly(caption, desc);
+                    shareTextOnly(caption);
                 } else {
                     Bitmap bitmap = bitmapDrawable.getBitmap();
-                    shareImageAndText(caption, desc, bitmap);
+                    shareImageAndText(caption, bitmap);
                 }
             }
         });

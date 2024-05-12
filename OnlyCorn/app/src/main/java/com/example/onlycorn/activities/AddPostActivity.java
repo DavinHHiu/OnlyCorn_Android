@@ -34,6 +34,7 @@ import android.webkit.MimeTypeMap;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import com.android.volley.AuthFailureError;
 import com.android.volley.Response;
@@ -41,6 +42,7 @@ import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.example.onlycorn.R;
 import com.example.onlycorn.models.Post;
 import com.example.onlycorn.models.User;
@@ -52,6 +54,7 @@ import com.google.android.exoplayer2.ExoPlayer;
 import com.google.android.exoplayer2.MediaItem;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.ui.PlayerView;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
@@ -73,15 +76,23 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 import kotlin.Unit;
 import kotlin.jvm.functions.Function1;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
 
 public class AddPostActivity extends AppCompatActivity {
     private EditText captionEt;
-    private ImageView postImage;
+    private ImageView postImage, avatarIv;
+    private TextView usernameTv, nameTv;
     private Button uploadButton;
     private PlayerView playerView;
 
@@ -110,6 +121,16 @@ public class AddPostActivity extends AppCompatActivity {
                     @Override
                     public void onSuccess(DocumentSnapshot documentSnapshot) {
                         user = documentSnapshot.toObject(User.class);
+                        if (user != null) {
+                            usernameTv.setText(user.getUsername());
+                            nameTv.setText(user.getName());
+                            try {
+                                Glide.with(getApplicationContext()).load(Uri.parse(user.getImage()))
+                                        .apply(RequestOptions.circleCropTransform()).into(avatarIv);
+                            } catch (Exception ex) {
+                                System.out.println(ex.getMessage());
+                            }
+                        }
                     }
                 });
 
@@ -127,9 +148,13 @@ public class AddPostActivity extends AppCompatActivity {
                     if (result.getResultCode() == Activity.RESULT_OK) {
                         Intent data = result.getData();
                         if (data != null && data.getData() != null) {
+                            type = "image";
+                            postImage.setVisibility(View.VISIBLE);
+                            playerView.setVisibility(View.GONE);
+
+                            postImage.setBackground(null);
                             imageUri = data.getData();
                             Picasso.get().load(imageUri).into(postImage);
-                            postImage.setBackground(null);
                         }
                     }
                 }
@@ -172,6 +197,9 @@ public class AddPostActivity extends AppCompatActivity {
         postImage = findViewById(R.id.postImage);
         playerView = findViewById(R.id.playerView);
         uploadButton = findViewById(R.id.uploadButton);
+        usernameTv = findViewById(R.id.usernameTv);
+        nameTv = findViewById(R.id.nameTv);
+        avatarIv = findViewById(R.id.avatarIv);
 
         postImage.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -201,6 +229,33 @@ public class AddPostActivity extends AppCompatActivity {
                     beginUpdate(caption, postId);
                 } else {
                     uploadData(caption);
+                }
+            }
+        });
+    }
+
+    private void loadUser(String userId, ImageView userPhoto, TextView userName, boolean saveGlobal) {
+        DocumentReference userRef = FirebaseUtils.getDocumentRef(User.COLLECTION, userId);
+        userRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
+            @Override
+            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
+                if (documentSnapshot != null) {
+                    User userDB = documentSnapshot.toObject(User.class);
+
+                    if (userDB != null) {
+                        if (userName != null) {
+                            userName.setText(userDB.getUsername());
+                        }
+                        try {
+                            Glide.with(getApplicationContext()).load(Uri.parse(userDB.getImage()))
+                                    .apply(RequestOptions.circleCropTransform()).into(userPhoto);
+                        } catch (Exception ex) {
+                            System.out.println(ex.getMessage());
+                        }
+                    }
+                    if (saveGlobal) {
+                        user = userDB;
+                    }
                 }
             }
         });
@@ -257,7 +312,7 @@ public class AddPostActivity extends AppCompatActivity {
                     @Override
                     public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
                         Task<Uri> uriTask = taskSnapshot.getStorage().getDownloadUrl();
-                        while (!uriTask.isSuccessful()) ;
+                        while (!uriTask.isSuccessful());
 
                         String downloadUri = uriTask.getResult().toString();
                         if (uriTask.isSuccessful()) {
@@ -391,12 +446,7 @@ public class AddPostActivity extends AppCompatActivity {
                                                   pd.dismiss();
                                                   Pop.pop(AddPostActivity.this, "Posted");
                                                   startActivity(new Intent(AddPostActivity.this, MainActivity.class));
-                                                  prepareNotification(
-                                                          postId,
-                                                          user.getUsername() + " add new post",
-                                                          caption,
-                                                          "PostNotification",
-                                                          "POST");
+                                                  sendPostNotification(postDb);
                                                   finish();
                                               }
                                           })
@@ -438,12 +488,7 @@ public class AddPostActivity extends AppCompatActivity {
                                                   pd.dismiss();
                                                   Pop.pop(AddPostActivity.this, "Posted");
                                                   startActivity(new Intent(AddPostActivity.this, MainActivity.class));
-                                                  prepareNotification(
-                                                          postId,
-                                                          user.getUsername() + " add new post",
-                                                          caption,
-                                                          "PostNotification",
-                                                          "POST");
+                                                  sendPostNotification(postDb);
                                                   finish();
                                               }
                                           })
@@ -475,12 +520,7 @@ public class AddPostActivity extends AppCompatActivity {
                             pd.dismiss();
                             Pop.pop(AddPostActivity.this, "Posted");
                             startActivity(new Intent(AddPostActivity.this, MainActivity.class));
-                            prepareNotification(
-                                    postId,
-                                    user.getUsername() + " add new post",
-                                    caption,
-                                    "PostNotification",
-                                    "POST");
+                            sendPostNotification(postDb);
                             finish();
                         }
                     })
@@ -492,6 +532,49 @@ public class AddPostActivity extends AppCompatActivity {
                         }
                     });
         }
+    }
+
+    private void sendPostNotification(Post post) {
+        FirebaseUtils.getDocumentRef(User.FOLLOWER_COLLECTION, user.getUserId())
+                .addSnapshotListener(new EventListener<DocumentSnapshot>() {
+            @Override
+            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
+                if (documentSnapshot != null) {
+                    Map<String, Object> data = documentSnapshot.getData();
+                    if (data != null) {
+                        for (String followerId : data.keySet()) {
+                            FirebaseUtils.getDocumentRef(User.COLLECTION, followerId).get()
+                                    .addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                                @Override
+                                public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                                    String fcmToken = task.getResult().getString("fcmToken");
+                                    if (fcmToken != null) {
+                                        try{
+                                            JSONObject jsonObject = new JSONObject();
+
+                                            JSONObject notificationObj = new JSONObject();
+                                            notificationObj.put("title", "Only Corn");
+                                            notificationObj.put("body", String.format("%s vừa đăng 1 bài viết mới.", post.getUsername()));
+
+                                            JSONObject dataObj = new JSONObject();
+                                            dataObj.put("postId", postId);
+
+                                            jsonObject.put("notification", notificationObj);
+                                            jsonObject.put("data", dataObj);
+                                            jsonObject.put("to", fcmToken);
+
+                                            FirebaseUtils.callApi(jsonObject);
+                                        } catch (Exception ex) {
+
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        });
     }
 
     private void loadPostData(String postId) {
@@ -515,57 +598,6 @@ public class AddPostActivity extends AppCompatActivity {
                 }
             }
         });
-    }
-
-    private void prepareNotification(String postId, String caption, String description,
-                                     String notificationType, String notificationTopic) {
-        String NOTIFICATION_TOPIC = "/topics/" + notificationTopic;
-        String NOTIFICATION_TITLE = caption;
-        String NOTIFICATION_MESSAGE = description;
-        String NOTIFICATION_TYPE = notificationType;
-
-        JSONObject notificationJo = new JSONObject();
-        JSONObject notificationBodyJo = new JSONObject();
-
-        try {
-            notificationBodyJo.put("notificationType", NOTIFICATION_TYPE);
-            notificationBodyJo.put("sender", user.getUserId());
-            notificationBodyJo.put("postId", postId);
-            notificationBodyJo.put("pCaption", NOTIFICATION_TITLE);
-            notificationBodyJo.put("pDescription", NOTIFICATION_MESSAGE);
-
-            notificationJo.put("to", NOTIFICATION_TOPIC);
-            notificationJo.put("data", notificationBodyJo);
-        } catch (JSONException e) {
-            Pop.pop(this, e.getMessage());
-        }
-
-        sendPostNotification(notificationJo);
-    }
-
-    private void sendPostNotification(JSONObject notificationJo) {
-        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest("https://fcm.googleapis.com/fcm/send", notificationJo,
-                new Response.Listener<JSONObject>() {
-                    @Override
-                    public void onResponse(JSONObject response) {
-                        Log.d("FCM_RESPONSE", "onResponse: " + response.toString());
-                    }
-                },
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError volleyError) {
-                        Pop.pop(AddPostActivity.this, volleyError.toString());
-                    }
-                }) {
-            @Override
-            public Map<String, String> getHeaders() throws AuthFailureError {
-                Map<String, String> header = new HashMap<>();
-                header.put("Content-Type", "application/json");
-                header.put("Authorization", "key=de6b13a7be301d2603174ebfa13084512d369acf");
-                return header;
-            }
-        };
-        Volley.newRequestQueue(this).add(jsonObjectRequest);
     }
 
     private void showImagePickDialog() {

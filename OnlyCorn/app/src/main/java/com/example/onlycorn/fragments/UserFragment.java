@@ -20,6 +20,8 @@ import com.example.onlycorn.utils.FirebaseUtils;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.EventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.FirebaseFirestoreException;
@@ -36,6 +38,7 @@ public class UserFragment extends Fragment {
 
     private UsersAdapter usersAdapter;
     private List<User> userList;
+    private String myUserId;
 
     public UserFragment() {
 
@@ -45,6 +48,7 @@ public class UserFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.user_fragment, container, false);
+        myUserId = FirebaseUtils.getUserAuth().getUid();
         initViews(view);
         return view;
     }
@@ -66,7 +70,7 @@ public class UserFragment extends Fragment {
                         userList.add(user);
                     }
 
-                    usersAdapter = new UsersAdapter(getActivity(), userList);
+                    usersAdapter = new UsersAdapter(getActivity(), userList, myUserId);
                     recyclerView.setAdapter(usersAdapter);
                 }
             }
@@ -88,7 +92,7 @@ public class UserFragment extends Fragment {
                         userList.add(user);
                     }
 
-                    usersAdapter = new UsersAdapter(getActivity(), userList);
+                    usersAdapter = new UsersAdapter(getActivity(), userList, myUserId);
                     recyclerView.setAdapter(usersAdapter);
                 }
             }

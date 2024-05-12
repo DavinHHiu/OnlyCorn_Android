@@ -1,5 +1,8 @@
 package com.example.onlycorn.activities;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.PickVisualMediaRequest;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -8,49 +11,62 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import android.Manifest;
+import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.example.onlycorn.R;
 import com.example.onlycorn.models.User;
 import com.example.onlycorn.utils.FirebaseUtils;
+import com.example.onlycorn.utils.ImageUtils;
 import com.example.onlycorn.utils.Pop;
+import com.github.dhaval2404.imagepicker.ImagePicker;
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.EventListener;
+import com.google.firebase.firestore.FirebaseFirestoreException;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
+import com.squareup.picasso.Picasso;
+
+import kotlin.Unit;
+import kotlin.jvm.functions.Function1;
 
 public class EditProfileActivity extends AppCompatActivity {
-    private static final int CAMERA_REQUEST_CODE = 100;
-    private static final int STORAGE_REQUEST_CODE = 200;
-    private static final int IMAGE_PICK_GALLERY_CODE = 300;
-    private static final int IMAGE_PICK_CAMERA_CODE = 400;
-
+    private ImageView avatarIv;
     private EditText nameEt, userNameEt, emailEt;
     private TextView editAvatar;
     private Button updateButton;
 
-    private FirebaseUser user;
+    private FirebaseUser userFb;
+    private User user;
     private FirebaseAuth mAuth;
 
-    private String storagePath = "Users_Avatar/";
-    private String[] cameraPermissions;
-    private String[] storagePermissions;
-
-    private Uri image_uri;
+    private String storagePath = "Users_Avatar/user_";
+    private Uri imageUri;
+    ActivityResultLauncher<Intent> imagePickLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,15 +75,13 @@ public class EditProfileActivity extends AppCompatActivity {
         initViews();
 
         mAuth = FirebaseAuth.getInstance();
-        user = mAuth.getCurrentUser();
-
-        cameraPermissions = new String[]{Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE};
-        storagePermissions = new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE};
+        userFb = mAuth.getCurrentUser();
+        loadUserInfo();
 
         editAvatar.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showImagePicDialog();
+                pickAvatarUpdateMethod();
             }
         });
 
@@ -75,6 +89,45 @@ public class EditProfileActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 updateProfileUser();
+            }
+        });
+
+        imagePickLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+                result -> {
+                    if (result.getResultCode() == Activity.RESULT_OK) {
+                        Intent data = result.getData();
+                        if (data != null && data.getData() != null) {
+                            imageUri = data.getData();
+                            Glide.with(getApplicationContext()).load(imageUri)
+                                    .apply(RequestOptions.circleCropTransform()).into(avatarIv);
+                        }
+                    }
+                }
+        );
+    }
+
+    private void loadUserInfo() {
+        DocumentReference userRef = FirebaseUtils.getDocumentRef(User.COLLECTION, userFb.getUid());
+        userRef.addSnapshotListener(new EventListener<DocumentSnapshot>() {
+            @Override
+            public void onEvent(@Nullable DocumentSnapshot documentSnapshot, @Nullable FirebaseFirestoreException e) {
+                if (documentSnapshot != null) {
+                    user = documentSnapshot.toObject(User.class);
+
+                    if (user != null) {
+                        nameEt.setText(user.getName());
+                        userNameEt.setText(user.getUsername());
+                        emailEt.setText(user.getEmail());
+
+                        try {
+                            imageUri = Uri.parse(user.getImage());
+                            Glide.with(getApplicationContext()).load(imageUri)
+                                    .apply(RequestOptions.circleCropTransform()).into(avatarIv);
+                        } catch (Exception ex) {
+                            System.out.println(ex.getMessage());
+                        }
+                    }
+                }
             }
         });
     }
@@ -87,13 +140,14 @@ public class EditProfileActivity extends AppCompatActivity {
         if (name.isEmpty() || username.isEmpty() || email.isEmpty()) {
             Pop.pop(this, "Vui lòng điền đầy đủ thông tin");
         } else {
-            User userDB = new User(user.getUid(), name, username, email);
-            FirebaseUtils.getDocumentRef(User.COLLECTION, user.getUid())
+            User userDB = new User(userFb.getUid(), name, email, username, imageUri.toString(), "online");
+            FirebaseUtils.getDocumentRef(User.COLLECTION, userFb.getUid())
                     .set(userDB)
                     .addOnCompleteListener(new OnCompleteListener<Void>() {
                         @Override
                         public void onComplete(@NonNull Task<Void> task) {
                             if (task.isSuccessful()) {
+                                uploadProfileAvatar();
                                 Pop.pop(getApplicationContext(), "Cập nhật thành công");
                                 startActivity(new Intent(getApplicationContext(), MainActivity.class));
                                 finish();
@@ -103,92 +157,33 @@ public class EditProfileActivity extends AppCompatActivity {
         }
     }
 
-    private boolean checkStoragePermission() {
-       return ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-               == (PackageManager.PERMISSION_GRANTED);
-    }
-
-    private void requestStoragePermission() {
-        ActivityCompat.requestPermissions(this, storagePermissions, STORAGE_REQUEST_CODE);
-    }
-
-    private boolean checkCameraPermission() {
-        boolean camPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
-                == (PackageManager.PERMISSION_GRANTED);
-        boolean writePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                == (PackageManager.PERMISSION_GRANTED);
-        return camPermission && writePermission;
-    }
-
-    private void requestCameraPermission() {
-        ActivityCompat.requestPermissions(this, cameraPermissions, CAMERA_REQUEST_CODE);
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        switch (requestCode) {
-            case CAMERA_REQUEST_CODE:
-                if (grantResults.length > 0) {
-                    boolean cameraAccepted = grantResults[0] == PackageManager.PERMISSION_GRANTED;
-                    boolean writeStorageAccepted = grantResults[1] == PackageManager.PERMISSION_GRANTED;
-                    if (cameraAccepted && writeStorageAccepted) {
-                        pickFromCamera();
-                    } else {
-                        Pop.pop(this, "Please enable camera & storage permission");
-                    }
-                }
-                break;
-            case STORAGE_REQUEST_CODE:
-                if (grantResults.length > 0) {
-                    boolean writeStorageAccepted = grantResults[0] == PackageManager.PERMISSION_GRANTED;
-                    if (writeStorageAccepted) {
-                        pickFromGallery();
-                    } else {
-                        Pop.pop(this, "Please enable storage permission");
-                    }
-                }
-                break;
-        }
-
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        if (resultCode == RESULT_OK) {
-            if (requestCode == IMAGE_PICK_GALLERY_CODE) {
-                image_uri = data.getData();
-
-                uploadProfileAvatar(image_uri);
-            }
-            if (requestCode == IMAGE_PICK_CAMERA_CODE) {
-                uploadProfileAvatar(image_uri);
-            }
-        }
-        super.onActivityResult(requestCode, resultCode, data);
-    }
-
-    private void uploadProfileAvatar(Uri imageUri) {
-        String filePathAndName = storagePath + user.getUid();
+    private void uploadProfileAvatar() {
+        String filePathAndName = storagePath + userFb.getUid();
 
         StorageReference storageRef2 = FirebaseUtils.getStorageRef(filePathAndName);
+        if (imageUri != null && imageUri.toString().equals(user.getImage())) {
+            return;
+        }
         storageRef2.putFile(imageUri)
                 .addOnCompleteListener(new OnCompleteListener<UploadTask.TaskSnapshot>() {
                     @Override
                     public void onComplete(@NonNull Task<UploadTask.TaskSnapshot> task) {
                         Task<Uri> uriTask = task.getResult().getStorage().getDownloadUrl();
+                        while (!uriTask.isSuccessful());
 
                         if (uriTask.isSuccessful()) {
-                            Uri downloadUri = uriTask.getResult();
+                            String downloadUri = uriTask.getResult().toString();
 
-                            FirebaseUtils.getDocumentRef(User.COLLECTION, user.getUid())
+                            FirebaseUtils.getDocumentRef(User.COLLECTION, userFb.getUid())
                                     .get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
                                         @Override
                                         public void onComplete(@NonNull Task<DocumentSnapshot> task) {
                                             User userDB = task.getResult().toObject(User.class);
-                                            userDB.setImage(downloadUri.toString());
-                                            FirebaseUtils.getDocumentRef(User.COLLECTION, user.getUid())
-                                                    .set(userDB);
+                                            if (userDB != null) {
+                                                userDB.setImage(downloadUri);
+                                                FirebaseUtils.getDocumentRef(User.COLLECTION, userFb.getUid())
+                                                        .set(userDB);
+                                            }
                                         }
                                     });
 
@@ -206,50 +201,15 @@ public class EditProfileActivity extends AppCompatActivity {
                 });
     }
 
-    private void pickFromGallery() {
-        Intent galleryIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        galleryIntent.setType("image/*");
-        startActivityForResult(galleryIntent, IMAGE_PICK_CAMERA_CODE);
-    }
-
-    private void pickFromCamera() {
-        ContentValues values = new ContentValues();
-        values.put(MediaStore.Images.Media.TITLE, "Temp pic");
-        values.put(MediaStore.Images.Media.DESCRIPTION, "Temp Description");
-
-        image_uri = this.getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
-
-        Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-        cameraIntent.putExtra(MediaStore.EXTRA_OUTPUT, image_uri);
-        startActivityForResult(cameraIntent, IMAGE_PICK_CAMERA_CODE);
-    }
-
-    private void showImagePicDialog() {
-        String[] options = {"Máy ảnh", "Thư viện"};
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Chọn ảnh đại diện");
-
-        builder.setItems(options, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                if (which == 0) {
-                    if (!checkCameraPermission()) {
-                        requestCameraPermission();
-                    } else {
-                        pickFromCamera();
+    private void pickAvatarUpdateMethod() {
+        ImagePicker.with(this).cropSquare().compress(512).maxResultSize(512, 512)
+                .createIntent(new Function1<Intent, Unit>() {
+                    @Override
+                    public Unit invoke(Intent intent) {
+                        imagePickLauncher.launch(intent);
+                        return null;
                     }
-                } else if (which == 1) {
-                    // gallery
-                    if (!checkStoragePermission()) {
-                        requestStoragePermission();
-                    } else {
-                        pickFromGallery();
-                    }
-                }
-            }
-        });
-        builder.create().show();
+                });
     }
 
     private void initViews() {
@@ -258,5 +218,6 @@ public class EditProfileActivity extends AppCompatActivity {
         emailEt = findViewById(R.id.emailEt);
         editAvatar = findViewById(R.id.edit_avatar);
         updateButton = findViewById(R.id.updateButton);
+        avatarIv = findViewById(R.id.avatarIv);
     }
 }

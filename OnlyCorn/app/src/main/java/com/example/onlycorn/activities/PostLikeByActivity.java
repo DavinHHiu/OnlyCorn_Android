@@ -54,8 +54,8 @@ public class PostLikeByActivity extends AppCompatActivity {
                         String otherId = entry.getKey();
 
                         getUser(otherId);
-                        usersAdapter = new UsersAdapter(PostLikeByActivity.this, userList);
-                        recyclerView.setAdapter(usersAdapter);
+//                        usersAdapter = new UsersAdapter(PostLikeByActivity.this, userList);
+//                        recyclerView.setAdapter(usersAdapter);
                     }
                 }
             }
