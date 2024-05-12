@@ -69,17 +69,16 @@
         android:background="@drawable/button_primary"
         android:layout_below="@+id/passwordTIL"
         android:layout_width="match_parent"
-        android:layout_height="35dp" />
+        android:layout_height="40dp" />
 
     <com.google.android.gms.common.SignInButton
         android:id="@+id/google_login_btn"
         android:layout_below="@+id/login_btn"
         android:layout_centerHorizontal="true"
-        android:background="@drawable/button_primary"
         android:layout_marginTop="10dp"
         app:colorScheme="dark"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="50dp">
         <ImageView android:layout_width="16dp"
             android:layout_height="16dp"
             android:layout_gravity="center_vertical"

@@ -35,8 +35,9 @@ public class RegisterActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_register);
-
         initViews();
+        checkUserStatus();
+
 
         registerBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -102,5 +103,13 @@ public class RegisterActivity extends AppCompatActivity {
         progressDialog.setMessage("Register User...");
 
         mAuth = FirebaseAuth.getInstance();
+    }
+
+    private void checkUserStatus() {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user != null) {
+            startActivity(new Intent(this, MainActivity.class));
+            this.finish();
+        }
     }
 }

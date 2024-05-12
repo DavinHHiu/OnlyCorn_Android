@@ -1,5 +1,6 @@
 package com.example.onlycorn.adapters;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -125,6 +126,7 @@ public class UsersAdapter extends RecyclerView.Adapter<UsersAdapter.UsersViewHol
         });
     }
 
+    @SuppressLint("ResourceAsColor")
     private void setStatus(User user, Button button) {
         if (isFollower && isFollowing) {
             button.setText("Bạn bè");

@@ -4,12 +4,18 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -20,11 +26,13 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
+import com.example.onlycorn.activities.AddPostActivity;
 import com.example.onlycorn.activities.EditProfileActivity;
 import com.example.onlycorn.activities.FollowerActivity;
 import com.example.onlycorn.activities.FollowingActivity;
 import com.example.onlycorn.activities.LoginActivity;
 import com.example.onlycorn.R;
+import com.example.onlycorn.activities.PostDetailActivity;
 import com.example.onlycorn.adapters.PostAdapter;
 import com.example.onlycorn.models.Post;
 import com.example.onlycorn.models.User;
@@ -50,6 +58,7 @@ import java.util.Map;
 
 public class ProfileFragment extends Fragment {
     private ImageView avatarIv;
+    private ImageButton moreButton;
     private TextView usernameTv, nameTv;
     private TextView posts;
     private TextView followers;
@@ -59,6 +68,7 @@ public class ProfileFragment extends Fragment {
     private RecyclerView recyclerViewPosts;
 
     private FirebaseUser authUser;
+    private FirebaseAuth firebaseAuth;
 
     private User user;
     private Context context;
@@ -100,6 +110,7 @@ public class ProfileFragment extends Fragment {
     }
 
     private void loadData() {
+        firebaseAuth = FirebaseAuth.getInstance();
         authUser = FirebaseUtils.getUserAuth();
         postList = new ArrayList<>();
         loadUserInfo();
@@ -213,7 +224,34 @@ public class ProfileFragment extends Fragment {
         editButton = view.findViewById(R.id.editButton);
         recyclerViewPosts = view.findViewById(R.id.recycleViewPosts);
 
+        moreButton = view.findViewById(R.id.moreButton);
         followingBtn = view.findViewById(R.id.followingButton);
         followerBtn = view.findViewById(R.id.followerButton);
+
+        moreButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showMoreOptions(moreButton);
+            }
+        });
+    }
+
+    private void showMoreOptions(ImageButton moreButton) {
+        PopupMenu popupMenu = new PopupMenu(context, moreButton, Gravity.END);
+
+        popupMenu.getMenu().add(Menu.NONE, 0, 0, "Đăng xuất");
+        popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                int id = item.getItemId();
+                if (id == 0) {
+                    firebaseAuth.signOut();
+                    checkUserStatus();
+                }
+                return false;
+            }
+        });
+
+        popupMenu.show();
     }
 }

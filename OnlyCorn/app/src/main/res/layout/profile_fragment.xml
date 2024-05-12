@@ -6,6 +6,7 @@
 
     <LinearLayout
         android:id="@+id/actionBar"
+        android:weightSum="10"
         android:orientation="horizontal"
         android:layout_width="match_parent"
         app:layout_constraintTop_toTopOf="parent"
@@ -13,14 +14,24 @@
         <TextView
             android:id="@+id/usernameTv"
             android:text=""
+            android:layout_weight="9"
             android:paddingLeft="20dp"
             android:textSize="20sp"
             android:textColor="@color/black"
             android:background="@color/white"
             android:textStyle="bold"
             android:gravity="center_vertical"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="match_parent" />
+        <ImageButton
+            android:id="@+id/moreButton"
+            android:layout_weight="1"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_gravity="center_vertical"
+            android:rotation="90"
+            android:background="@color/white"
+            android:src="@drawable/icon_more" />
     </LinearLayout>
     <ScrollView
         app:layout_constraintTop_toBottomOf="@+id/actionBar"
@@ -152,6 +163,8 @@
                     android:id="@+id/editButton"
                     android:text="Chỉnh sửa"
                     android:textStyle="bold"
+                    android:textSize="11sp"
+                    android:background="#EEEEEE"
                     android:textAllCaps="false"
                     android:layout_width="match_parent"
                     android:layout_height="40dp" />
